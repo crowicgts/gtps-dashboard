@@ -17,12 +17,7 @@ let serverData = {
     port: GTPS_PORT,
     playerCount: 0,
     players: [],
-    logs: [],
-    richest: [],
-    topGems: [],
-    topLevel: [],
-    gemEvent: false,
-    xpEvent: false
+    logs: []
 };
 
 async function pollGTPSCloud() {
@@ -41,12 +36,7 @@ async function pollGTPSCloud() {
                 port: data.port || GTPS_PORT,
                 playerCount: data.playerCount || (data.players ? data.players.length : 0),
                 players: data.players || [],
-                logs: data.logs || serverData.logs || [],
-                richest: data.richest || [],
-                topGems: data.topGems || [],
-                topLevel: data.topLevel || [],
-                gemEvent: data.gemEvent || false,
-                xpEvent: data.xpEvent || false
+                logs: data.logs || serverData.logs || []
             };
         } else {
             serverData.status = "OFFLINE";
@@ -86,7 +76,7 @@ app.post('/api/admin/action', async (req, res) => {
         const result = await response.json().catch(() => ({ success: true }));
         return res.json({ success: true, result });
     } catch (e) {
-        return res.json({ success: true, message: "Action queued to GTPS" });
+        return res.json({ success: true, message: "Action queued" });
     }
 });
 
@@ -95,495 +85,469 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOIDPS • Ultimate GTPS Portal</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>VOIDPS • Official Growtopia Realm</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-base: #070314;
-            --bg-card: rgba(19, 10, 42, 0.7);
-            --bg-card-hover: rgba(32, 16, 70, 0.85);
-            --neon-purple: #a855f7;
-            --neon-violet: #8b5cf6;
-            --neon-pink: #ec4899;
-            --neon-cyan: #06b6d4;
-            --neon-gold: #fbbf24;
-            --purple-glow: rgba(168, 85, 247, 0.4);
-            --pink-glow: rgba(236, 72, 153, 0.4);
-            --border-purple: rgba(168, 85, 247, 0.35);
-            --border-glow: #c084fc;
-            --text-main: #ffffff;
-            --text-dim: #a78bfa;
-            --online-green: #10b981;
-            --offline-red: #f43f5e;
+            --bg-dark: #030712;
+            --lol-gold: #c8aa6e;
+            --lol-gold-bright: #f0e6d2;
+            --lol-blue-glow: #00d2ff;
+            --lol-deep-blue: #091428;
+            --lol-panel-bg: rgba(9, 20, 40, 0.85);
+            --lol-border: #1e3a5f;
+            --lol-border-active: #c8aa6e;
+            --neon-cyan: #38bdf8;
+            --text-gold: #c8aa6e;
+            --text-main: #f0e6d2;
+            --text-muted: #a09b8c;
+            --online-green: #00ff88;
+            --offline-red: #ff3366;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
 
         body {
-            background-color: var(--bg-base);
+            background-color: var(--bg-dark);
             color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
-            background-image: 
-                radial-gradient(circle at 15% 15%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
-                radial-gradient(circle at 85% 20%, rgba(236, 72, 153, 0.12) 0%, transparent 45%),
-                radial-gradient(circle at 50% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
         }
 
-        /* Animated Grid Overlay */
-        body::before {
-            content: '';
+        /* Animated Canvas Particles */
+        #bg-canvas {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: linear-gradient(rgba(168, 85, 247, 0.03) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(168, 85, 247, 0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
             pointer-events: none;
             z-index: 0;
-            animation: gridMove 20s linear infinite;
         }
 
-        @keyframes gridMove {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(40px); }
-        }
-
-        .container {
-            max-width: 1350px;
-            margin: 0 auto;
-            padding: 24px;
+        /* Top LoL Style Navigation Bar */
+        .top-navbar {
             position: relative;
-            z-index: 1;
-        }
-
-        /* Header Bar */
-        header {
+            z-index: 10;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--bg-card);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border-purple);
-            padding: 20px 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 25px var(--purple-glow);
-            margin-bottom: 24px;
-            animation: glowHeader 4s ease-in-out infinite alternate;
+            padding: 0 40px;
+            height: 72px;
+            background: rgba(4, 10, 20, 0.95);
+            border-bottom: 2px solid #1e282d;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 210, 255, 0.15);
         }
 
-        @keyframes glowHeader {
-            0% { border-color: rgba(168, 85, 247, 0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 20px var(--purple-glow); }
-            100% { border-color: rgba(236, 72, 153, 0.55); box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 35px var(--pink-glow); }
-        }
-
-        .brand-box {
+        .nav-brand {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 14px;
         }
 
-        .brand-icon {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 26px;
-            box-shadow: 0 0 20px var(--neon-pink);
-            animation: pulseIcon 3s infinite;
-        }
-
-        @keyframes pulseIcon {
-            0%, 100% { transform: scale(1); filter: brightness(1); }
-            50% { transform: scale(1.05); filter: brightness(1.2); }
-        }
-
-        .brand-title h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 28px;
+        .nav-logo-text {
+            font-family: 'Cinzel', serif;
+            font-size: 24px;
             font-weight: 900;
-            background: linear-gradient(90deg, #ffffff, #d8b4fe, #f472b6);
+            letter-spacing: 3px;
+            background: linear-gradient(180deg, #fff, #c8aa6e 60%, #785a28);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(200, 170, 110, 0.5);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+            height: 100%;
+            align-items: center;
+        }
+
+        .nav-link {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
             letter-spacing: 2px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 8px 12px;
+            position: relative;
+            transition: all 0.25s ease;
         }
 
-        .brand-title p {
-            color: var(--text-dim);
-            font-size: 13px;
-            letter-spacing: 1px;
+        .nav-link:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px var(--lol-blue-glow);
         }
 
-        .header-actions {
+        .nav-link.active {
+            color: var(--lol-gold-bright);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -16px; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--lol-blue-glow), transparent);
+            box-shadow: 0 0 10px var(--lol-blue-glow);
+        }
+
+        .nav-auth {
             display: flex;
             align-items: center;
             gap: 16px;
         }
 
-        .status-badge {
+        .btn-play-now {
+            font-family: 'Cinzel', serif;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #1e3a5f, #0a1428);
+            border: 2px solid var(--lol-blue-glow);
+            color: #ffffff;
+            padding: 10px 24px;
+            border-radius: 2px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), inset 0 0 10px rgba(0, 210, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .btn-play-now:hover {
+            background: linear-gradient(180deg, #00d2ff, #091428);
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.8), inset 0 0 15px rgba(0, 210, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Hero Banner */
+        .hero-banner {
+            position: relative;
+            z-index: 1;
+            height: 380px;
+            background: radial-gradient(circle at 70% 30%, rgba(0, 210, 255, 0.2) 0%, transparent 60%),
+                        linear-gradient(180deg, rgba(3, 7, 18, 0.3) 0%, #030712 100%),
+                        url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1600&auto=format&fit=crop') center/cover;
+            display: flex;
+            align-items: center;
+            padding: 0 60px;
+            border-bottom: 2px solid rgba(0, 210, 255, 0.3);
+            box-shadow: inset 0 -40px 60px #030712;
+        }
+
+        .hero-content {
+            max-width: 650px;
+        }
+
+        .hero-tag {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: var(--lol-blue-glow);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hero-title {
+            font-family: 'Cinzel', serif;
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            background: linear-gradient(180deg, #ffffff, #c8aa6e 60%, #946c24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+
+        .hero-desc {
+            color: var(--text-muted);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .hero-stat-pill {
+            background: rgba(9, 20, 40, 0.85);
+            border: 1px solid var(--lol-border);
+            padding: 8px 18px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             gap: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--border-purple);
-            padding: 8px 18px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 600;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
 
-        .status-light {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: var(--offline-red);
-            box-shadow: 0 0 10px var(--offline-red);
+        .main-container {
+            max-width: 1400px;
+            margin: -30px auto 40px auto;
+            padding: 0 30px;
+            position: relative;
+            z-index: 2;
         }
 
-        .status-light.online {
-            background: var(--online-green);
-            box-shadow: 0 0 14px var(--online-green);
-            animation: pulseLight 1.5s infinite;
-        }
-
-        @keyframes pulseLight {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.3); opacity: 0.7; }
-        }
-
-        .btn-admin {
-            background: linear-gradient(135deg, #7e22ce, #db2777);
-            border: 1px solid var(--neon-pink);
-            color: white;
-            padding: 9px 20px;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            box-shadow: 0 0 15px rgba(219, 39, 119, 0.4);
-            transition: all 0.25s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-admin:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0 25px rgba(219, 39, 119, 0.8);
-        }
-
-        /* Navigation Tabs */
-        .nav-tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 24px;
-            overflow-x: auto;
-            padding-bottom: 4px;
-        }
-
-        .tab-btn {
-            background: var(--bg-card);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-purple);
-            color: var(--text-dim);
-            padding: 12px 22px;
-            border-radius: 14px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-        }
-
-        .tab-btn:hover {
-            background: var(--bg-card-hover);
-            color: white;
-            border-color: var(--neon-purple);
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, rgba(168, 85, 247, 0.35), rgba(236, 72, 153, 0.35));
-            border-color: var(--border-glow);
-            color: white;
-            box-shadow: 0 0 20px var(--purple-glow);
-        }
-
-        /* Stat Cards */
-        .stats-grid {
+        /* League Style Featured Grid */
+        .featured-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .stat-box {
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-purple);
-            padding: 22px;
-            border-radius: 16px;
+        @media (max-width: 1100px) { .featured-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .featured-grid { grid-template-columns: 1fr; } }
+
+        .feature-card {
+            background: linear-gradient(180deg, rgba(16, 32, 60, 0.7), rgba(9, 20, 40, 0.95));
+            border: 1px solid var(--lol-border);
+            border-radius: 4px;
+            padding: 20px;
             position: relative;
             overflow: hidden;
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
         }
 
-        .stat-box:hover {
-            transform: translateY(-3px);
-            border-color: var(--neon-purple);
-            box-shadow: 0 8px 30px var(--purple-glow);
+        .feature-card:hover {
+            border-color: var(--lol-blue-glow);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 35px rgba(0, 210, 255, 0.25);
         }
 
-        .stat-box::after {
+        .feature-card::before {
             content: '';
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 3px;
-            background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));
+            top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--lol-blue-glow), transparent);
         }
 
-        .stat-box h4 {
-            font-size: 12px;
+        .feature-card h4 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 13px;
+            letter-spacing: 2px;
             text-transform: uppercase;
-            color: var(--text-dim);
+            color: var(--text-muted);
             margin-bottom: 6px;
-            letter-spacing: 1px;
         }
 
-        .stat-box .num {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 30px;
-            font-weight: 700;
-            color: white;
+        .feature-card .val {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 800;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        /* Main Content Grid */
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+        /* Tab Content Panels */
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .dashboard-grid {
+        .dashboard-layout {
             display: grid;
             grid-template-columns: 1fr 1.2fr;
             gap: 24px;
         }
 
-        @media (max-width: 960px) {
-            .dashboard-grid { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 960px) { .dashboard-layout { grid-template-columns: 1fr; } }
 
-        .panel {
-            background: var(--bg-card);
-            backdrop-filter: blur(14px);
-            border: 1px solid var(--border-purple);
-            border-radius: 18px;
+        .glass-box {
+            background: var(--lol-panel-bg);
+            border: 1px solid var(--lol-border);
+            border-radius: 4px;
             padding: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
         }
 
-        .panel-header {
+        .glass-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
-            padding-bottom: 14px;
-            border-bottom: 1px solid rgba(168, 85, 247, 0.2);
+            padding-bottom: 12px;
+            border-bottom: 1px solid #1e3a5f;
         }
 
-        .panel-header h3 {
-            font-family: 'Orbitron', sans-serif;
+        .glass-header h3 {
+            font-family: 'Cinzel', serif;
             font-size: 18px;
-            color: #ffffff;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            color: var(--lol-gold-bright);
         }
 
-        /* Player List */
-        .player-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-height: 520px;
-            overflow-y: auto;
+        /* Item Icon Component */
+        .gt-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(200, 170, 110, 0.4);
+            font-size: 16px;
+            vertical-align: middle;
         }
 
-        .player-item {
+        .icon-bgl { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
+        .icon-dl { border-color: #60a5fa; box-shadow: 0 0 8px rgba(96, 165, 250, 0.4); }
+        .icon-wl { border-color: #fbbf24; }
+        .icon-gems { border-color: #ec4899; }
+
+        /* Player Item Row */
+        .player-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(10, 5, 24, 0.6);
-            border: 1px solid rgba(168, 85, 247, 0.2);
+            background: rgba(4, 10, 20, 0.7);
+            border: 1px solid #142845;
             padding: 14px 18px;
-            border-radius: 12px;
+            margin-bottom: 10px;
+            border-radius: 2px;
             transition: all 0.2s ease;
         }
 
-        .player-item:hover {
-            border-color: var(--border-glow);
-            background: rgba(30, 14, 60, 0.8);
+        .player-row:hover {
+            border-color: var(--lol-blue-glow);
+            background: rgba(10, 26, 52, 0.9);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
             transform: translateX(4px);
         }
 
-        .player-name {
+        .player-title {
             font-weight: 700;
-            font-size: 16px;
-            color: white;
+            font-size: 15px;
+            color: #ffffff;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
-        .player-world {
-            font-size: 13px;
+        .player-loc {
+            font-size: 12px;
             color: var(--neon-cyan);
             margin-top: 2px;
         }
 
-        .player-meta {
+        .player-wealth {
             text-align: right;
         }
 
-        .player-gems {
-            color: var(--neon-gold);
-            font-weight: 700;
-            font-size: 14px;
-        }
-
-        .player-lvl {
-            color: var(--text-dim);
-            font-size: 12px;
-        }
-
         /* Terminal Logs */
-        .terminal-box {
-            background: #04020a;
-            border: 1px solid #1e133a;
-            border-radius: 12px;
+        .terminal-stream {
+            background: #02050d;
+            border: 1px solid #102035;
             padding: 16px;
-            height: 520px;
+            height: 500px;
             overflow-y: auto;
             font-family: 'Courier New', monospace;
             font-size: 13px;
         }
 
-        .log-row {
-            margin-bottom: 10px;
-            line-height: 1.5;
+        .log-line {
+            margin-bottom: 8px;
+            line-height: 1.4;
             word-break: break-all;
         }
 
-        .log-t { color: #6b7280; margin-right: 8px; }
-        .log-tag {
-            padding: 2px 7px;
-            border-radius: 6px;
+        .log-badge {
+            padding: 2px 6px;
+            border-radius: 2px;
             font-size: 10px;
             font-weight: bold;
-            margin-right: 8px;
+            margin-right: 6px;
             text-transform: uppercase;
         }
-        .tag-login { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
-        .tag-logout { background: rgba(244, 63, 94, 0.2); color: #fb7185; border: 1px solid #f43f5e; }
-        .tag-chat { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid #8b5cf6; }
-        .tag-world { background: rgba(6, 182, 212, 0.2); color: #67e8f9; border: 1px solid #06b6d4; }
 
-        /* Mines Mini-Game */
-        .mines-wrapper {
+        .badge-login { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+        .badge-logout { background: #881337; color: #f43f5e; border: 1px solid #be123c; }
+        .badge-chat { background: #1e3a8a; color: #60a5fa; border: 1px solid #2563eb; }
+        .badge-world { background: #581c87; color: #c084fc; border: 1px solid #7e22ce; }
+
+        /* Mines Game */
+        .mines-container {
             display: grid;
             grid-template-columns: 320px 1fr;
             gap: 24px;
         }
 
-        @media (max-width: 860px) {
-            .mines-wrapper { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 860px) { .mines-container { grid-template-columns: 1fr; } }
 
-        .mines-controls {
-            background: var(--bg-card);
-            border: 1px solid var(--border-purple);
+        .mines-panel {
+            background: var(--lol-panel-bg);
+            border: 1px solid var(--lol-border);
             padding: 24px;
-            border-radius: 18px;
+            border-radius: 4px;
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
 
-        .input-group label {
-            display: block;
-            font-size: 13px;
-            color: var(--text-dim);
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
-
-        .input-group input, .input-group select {
+        .mines-input {
             width: 100%;
-            background: #0a0518;
-            border: 1px solid var(--border-purple);
-            padding: 12px 14px;
-            border-radius: 10px;
-            color: white;
-            font-size: 15px;
+            background: #040a14;
+            border: 1px solid #1e3a5f;
+            padding: 12px;
+            color: #ffffff;
+            border-radius: 2px;
+            font-size: 14px;
             outline: none;
         }
 
-        .input-group input:focus, .input-group select:focus {
-            border-color: var(--neon-purple);
-            box-shadow: 0 0 15px var(--purple-glow);
+        .mines-input:focus {
+            border-color: var(--lol-blue-glow);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
         }
 
-        .btn-play {
-            background: linear-gradient(135deg, #9333ea, #ec4899);
-            border: none;
-            color: white;
+        .btn-gold {
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(180deg, #785a28, #463714);
+            border: 2px solid var(--lol-gold);
+            color: var(--lol-gold-bright);
             padding: 14px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: 'Orbitron', sans-serif;
+            border-radius: 2px;
             cursor: pointer;
-            box-shadow: 0 0 25px rgba(236, 72, 153, 0.5);
-            transition: all 0.2s ease;
+            box-shadow: 0 0 20px rgba(200, 170, 110, 0.3);
+            transition: all 0.25s ease;
         }
 
-        .btn-play:hover {
+        .btn-gold:hover {
+            background: linear-gradient(180deg, #c8aa6e, #785a28);
+            color: #000;
+            box-shadow: 0 0 30px rgba(200, 170, 110, 0.8);
             transform: translateY(-2px);
-            box-shadow: 0 0 35px rgba(236, 72, 153, 0.8);
         }
 
-        .btn-cashout {
-            background: linear-gradient(135deg, #059669, #10b981);
-            border: none;
-            color: white;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            font-family: 'Orbitron', sans-serif;
-            cursor: pointer;
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
-            transition: all 0.2s ease;
-            display: none;
-        }
-
-        .mines-board {
-            background: var(--bg-card);
-            border: 1px solid var(--border-purple);
+        .mines-board-box {
+            background: var(--lol-panel-bg);
+            border: 1px solid var(--lol-border);
             padding: 24px;
-            border-radius: 18px;
+            border-radius: 4px;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
         }
 
-        .mines-grid {
+        .mines-grid-matrix {
             display: grid;
             grid-template-columns: repeat(5, 75px);
             grid-template-rows: repeat(5, 75px);
@@ -591,52 +555,46 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         @media (max-width: 500px) {
-            .mines-grid {
+            .mines-grid-matrix {
                 grid-template-columns: repeat(5, 55px);
                 grid-template-rows: repeat(5, 55px);
                 gap: 8px;
             }
         }
 
-        .mine-tile {
-            background: #150a2e;
-            border: 2px solid #3b1d6e;
-            border-radius: 12px;
-            cursor: pointer;
+        .grid-cell {
+            background: #091428;
+            border: 2px solid #1e3a5f;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 28px;
+            cursor: pointer;
             transition: all 0.2s ease;
             user-select: none;
         }
 
-        .mine-tile:hover {
-            background: #25124f;
-            border-color: var(--neon-purple);
+        .grid-cell:hover {
+            border-color: var(--lol-blue-glow);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
             transform: scale(1.05);
-            box-shadow: 0 0 15px var(--purple-glow);
         }
 
-        .mine-tile.revealed-gem {
-            background: linear-gradient(135deg, #064e3b, #047857);
+        .grid-cell.hit-gem {
+            background: linear-gradient(180deg, #064e3b, #065f46);
             border-color: #34d399;
             box-shadow: 0 0 20px #10b981;
-            animation: popIn 0.3s ease;
         }
 
-        .mine-tile.revealed-bomb {
-            background: linear-gradient(135deg, #881337, #be123c);
-            border-color: #fb7185;
+        .grid-cell.hit-bomb {
+            background: linear-gradient(180deg, #881337, #9f1239);
+            border-color: #f43f5e;
             box-shadow: 0 0 25px #f43f5e;
-            animation: shake 0.4s ease;
         }
 
-        @keyframes popIn { 0% { transform: scale(0.6); } 100% { transform: scale(1); } }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
-
-        /* Admin Modal */
-        .modal-overlay {
+        /* Modal Overlay */
+        .modal-mask {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.85);
@@ -647,247 +605,240 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             justify-content: center;
         }
 
-        .modal-box {
-            background: #0f0724;
-            border: 2px solid var(--neon-pink);
-            border-radius: 20px;
-            padding: 32px;
+        .modal-card {
+            background: #091428;
+            border: 2px solid var(--lol-gold);
+            border-radius: 4px;
+            padding: 36px;
             width: 440px;
             max-width: 90%;
-            box-shadow: 0 0 50px rgba(236, 72, 153, 0.5);
-            animation: popIn 0.25s ease;
+            box-shadow: 0 0 50px rgba(200, 170, 110, 0.4);
         }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-header h3 {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--neon-pink);
-            font-size: 20px;
-        }
-
-        .close-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-dim);
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .empty-box {
+        .empty-placeholder {
             text-align: center;
             padding: 40px;
-            color: var(--text-dim);
+            color: var(--text-muted);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="brand-box">
-                <div class="brand-icon">⚡</div>
-                <div class="brand-title">
-                    <h1>VOIDPS CONTROL</h1>
-                    <p>NEXT-GEN GTPS ECOSYSTEM & LIVE PORTAL</p>
-                </div>
-            </div>
-            <div class="header-actions">
-                <div class="status-badge">
-                    <div class="status-light" id="statusLight"></div>
-                    <span id="statusTxt">CHECKING...</span>
-                </div>
-                <button class="btn-admin" onclick="openAdminModal()">
-                    <span>🛡️</span> <span id="adminBtnTxt">Admin Login</span>
-                </button>
-            </div>
-        </header>
+    <canvas id="bg-canvas"></canvas>
 
-        <div class="nav-tabs">
-            <button class="tab-btn active" onclick="switchTab('tab-overview')">🌐 Live Server</button>
-            <button class="tab-btn" onclick="switchTab('tab-players')">👑 Online Players</button>
-            <button class="tab-btn" onclick="switchTab('tab-mines')">💣 Mines Casino</button>
-            <button class="tab-btn" onclick="switchTab('tab-leaderboard')">🏆 Leaderboards</button>
-            <button class="tab-btn" onclick="switchTab('tab-logs')">📜 Real-Time Logs</button>
-            <button class="tab-btn" id="adminTabBtn" style="display:none;" onclick="switchTab('tab-admin')">⚡ Master Admin</button>
+    <nav class="top-navbar">
+        <div class="nav-brand">
+            <span style="font-size: 28px;">⚡</span>
+            <span class="nav-logo-text">VOIDPS</span>
         </div>
-
-        <div class="stats-grid">
-            <div class="stat-box">
-                <h4>Server Port</h4>
-                <div class="num" id="sPort">25741</div>
-            </div>
-            <div class="stat-box">
-                <h4>Active Players</h4>
-                <div class="num" id="sPlayers">0</div>
-            </div>
-            <div class="stat-box">
-                <h4>Server Status</h4>
-                <div class="num" id="sState" style="color: var(--online-green);">ONLINE</div>
-            </div>
-            <div class="stat-box">
-                <h4>Active Boosts</h4>
-                <div class="num" id="sBoosts" style="font-size: 20px; color: var(--neon-gold);">1x Regular</div>
-            </div>
+        <div class="nav-links">
+            <div class="nav-link active" onclick="activateTab('tab-live')">REALM STATUS</div>
+            <div class="nav-link" onclick="activateTab('tab-players')">ROSTER</div>
+            <div class="nav-link" onclick="activateTab('tab-mines')">MINES CASINO</div>
+            <div class="nav-link" onclick="activateTab('tab-leaderboard')">HALL OF FAME</div>
+            <div class="nav-link" onclick="activateTab('tab-logs')">SERVER LOGS</div>
+            <div class="nav-link" id="navAdminTab" style="display:none;" onclick="activateTab('tab-admin')">⚡ MASTER CONTROL</div>
         </div>
+        <div class="nav-auth">
+            <button class="btn-play-now" id="btnAdminAuth" onclick="openAdminDialog()">ADMIN LOGIN</button>
+        </div>
+    </nav>
 
-        <!-- TAB 1: OVERVIEW -->
-        <div id="tab-overview" class="tab-content active">
-            <div class="dashboard-grid">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3>Online Players</h3>
-                        <span id="playerCounter" style="color: var(--neon-purple); font-weight:700;">0 Active</span>
-                    </div>
-                    <div class="player-list" id="overviewPlayerList">
-                        <div class="empty-box">No players online or server connecting...</div>
-                    </div>
+    <div class="hero-banner">
+        <div class="hero-content">
+            <div class="hero-tag">
+                <span>⚡</span> LIVE REALM • PORT 25741
+            </div>
+            <h1 class="hero-title">ENTER THE REALM</h1>
+            <p class="hero-desc">Experience the ultimate Growtopia private server ecosystem. High performance, zero lag, live real-time world tracking, and exclusive economies.</p>
+            <div class="hero-stats">
+                <div class="hero-stat-pill">
+                    <span style="width:10px; height:10px; border-radius:50%; background:var(--online-green); box-shadow:0 0 10px var(--online-green);" id="heroStatusDot"></span>
+                    <span style="font-weight:700; letter-spacing:1px;" id="heroStatusText">SERVER ONLINE</span>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3>Live Server Stream</h3>
-                        <span style="color: var(--neon-pink); font-size:12px;">Real-Time</span>
-                    </div>
-                    <div class="terminal-box" id="overviewLogs">
-                        <div class="empty-box">Connecting to stream...</div>
-                    </div>
+                <div class="hero-stat-pill">
+                    <span style="color:var(--lol-blue-glow);">👑</span>
+                    <span style="font-weight:700;" id="heroPlayerCount">0 PLAYERS ONLINE</span>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- TAB 2: PLAYERS ROSTER -->
-        <div id="tab-players" class="tab-content">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Server Roster & Player Inspect</h3>
-                    <input type="text" id="playerSearch" placeholder="Search player..." oninput="filterPlayers()" style="background:#0a0518; border:1px solid var(--border-purple); padding:8px 14px; border-radius:8px; color:white; font-size:13px; outline:none;">
+    <div class="main-container">
+        <!-- Featured Grid -->
+        <div class="featured-grid">
+            <div class="feature-card">
+                <h4>Active Realm Port</h4>
+                <div class="val" id="cardPort">25741</div>
+            </div>
+            <div class="feature-card">
+                <h4>Online Champions</h4>
+                <div class="val" id="cardOnline">0</div>
+            </div>
+            <div class="feature-card">
+                <h4>Top Currency</h4>
+                <div class="val">
+                    <span class="gt-icon icon-bgl">💎</span>
+                    <span style="font-size:18px; color:var(--neon-cyan);">BGL (7188)</span>
                 </div>
-                <div class="player-list" id="fullPlayerList">
-                    <div class="empty-box">No players online.</div>
+            </div>
+            <div class="feature-card">
+                <h4>Server Engine</h4>
+                <div class="val" style="color:var(--online-green); font-size:22px;">GTPS CLOUD</div>
+            </div>
+        </div>
+
+        <!-- TAB: LIVE -->
+        <div id="tab-live" class="tab-panel active">
+            <div class="dashboard-layout">
+                <div class="glass-box">
+                    <div class="glass-header">
+                        <h3>ACTIVE PLAYERS</h3>
+                        <span id="playerBadge" style="color:var(--lol-blue-glow); font-weight:700;">0 ONLINE</span>
+                    </div>
+                    <div id="livePlayerList">
+                        <div class="empty-placeholder">Connecting to realm stream...</div>
+                    </div>
+                </div>
+
+                <div class="glass-box">
+                    <div class="glass-header">
+                        <h3>REALM ACTIVITY FEED</h3>
+                        <span style="color:var(--lol-gold); font-size:12px;">LIVE LOGS</span>
+                    </div>
+                    <div class="terminal-stream" id="liveLogs">
+                        <div class="empty-placeholder">Streaming server logs...</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 3: MINES CASINO -->
-        <div id="tab-mines" class="tab-content">
-            <div class="mines-wrapper">
-                <div class="mines-controls">
-                    <h3 style="font-family:'Orbitron',sans-serif; color:var(--neon-pink); font-size:18px;">💣 MINES GAME</h3>
-                    <div class="input-group">
-                        <label>Bet Amount (Gems)</label>
-                        <input type="number" id="mineBet" value="1000" min="100" step="100">
+        <!-- TAB: ROSTER -->
+        <div id="tab-players" class="tab-panel">
+            <div class="glass-box">
+                <div class="glass-header">
+                    <h3>ONLINE CHAMPIONS ROSTER</h3>
+                    <input type="text" id="playerFilter" placeholder="Search champion or world..." oninput="applyPlayerFilter()" class="mines-input" style="width:260px;">
+                </div>
+                <div id="rosterList">
+                    <div class="empty-placeholder">No champions currently online.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: MINES -->
+        <div id="tab-mines" class="tab-panel">
+            <div class="mines-container">
+                <div class="mines-panel">
+                    <h3 style="font-family:'Cinzel',serif; color:var(--lol-gold-bright); font-size:18px;">💣 MINES CASINO</h3>
+                    <div>
+                        <label style="font-size:12px; color:var(--text-muted); font-weight:bold;">BET AMOUNT (GEMS)</label>
+                        <input type="number" id="mineBet" value="1000" min="100" class="mines-input" style="margin-top:6px;">
                     </div>
-                    <div class="input-group">
-                        <label>Mine Count (1 - 24)</label>
-                        <select id="mineBombs">
-                            <option value="1">1 Mine (Safe)</option>
+                    <div>
+                        <label style="font-size:12px; color:var(--text-muted); font-weight:bold;">MINE COUNT</label>
+                        <select id="mineBombs" class="mines-input" style="margin-top:6px;">
+                            <option value="1">1 Mine (Low Risk)</option>
                             <option value="3" selected>3 Mines (Standard)</option>
-                            <option value="5">5 Mines (Risky)</option>
+                            <option value="5">5 Mines (High Risk)</option>
                             <option value="10">10 Mines (Extreme)</option>
-                            <option value="20">20 Mines (God Mode)</option>
+                            <option value="20">20 Mines (Godlike)</option>
                         </select>
                     </div>
-                    <div class="input-group">
-                        <label>Current Multiplier</label>
-                        <div id="mineMultiplier" style="font-family:'Orbitron',sans-serif; font-size:26px; color:var(--neon-gold); font-weight:700;">1.00x</div>
+                    <div>
+                        <label style="font-size:12px; color:var(--text-muted); font-weight:bold;">CURRENT MULTIPLIER</label>
+                        <div id="mineMultiplier" style="font-family:'Cinzel',serif; font-size:28px; color:var(--lol-blue-glow); font-weight:900; margin-top:4px;">1.00x</div>
                     </div>
-                    <button class="btn-play" id="btnStartMines" onclick="startMinesGame()">START GAME</button>
-                    <button class="btn-cashout" id="btnCashout" onclick="cashoutMines()">CASHOUT (0 Gems)</button>
+                    <button class="btn-gold" id="btnStartMines" onclick="startMines()">START GAME</button>
+                    <button class="btn-gold" id="btnCashoutMines" style="display:none; background:linear-gradient(180deg, #059669, #047857); border-color:#34d399;" onclick="cashoutMines()">CASHOUT</button>
                 </div>
-                <div class="mines-board">
-                    <div class="mines-grid" id="minesGrid"></div>
+                <div class="mines-board-box">
+                    <div class="mines-grid-matrix" id="minesGrid"></div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 4: LEADERBOARD -->
-        <div id="tab-leaderboard" class="tab-content">
-            <div class="dashboard-grid">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3>👑 Top Richest Players</h3>
+        <!-- TAB: LEADERBOARDS -->
+        <div id="tab-leaderboard" class="tab-panel">
+            <div class="dashboard-layout">
+                <div class="glass-box">
+                    <div class="glass-header">
+                        <h3>👑 RICHEST LOCKS (WL/DL/BGL)</h3>
                     </div>
-                    <div class="player-list" id="lbRichest">
-                        <div class="empty-box">Calculating rankings...</div>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">
-                        <h3>💎 Top Gems Balance</h3>
-                    </div>
-                    <div class="player-list" id="lbGems">
-                        <div class="empty-box">Calculating rankings...</div>
+                    <div id="lbRichest">
+                        <div class="empty-placeholder">Calculating wealth...</div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- TAB 5: LOGS -->
-        <div id="tab-logs" class="tab-content">
-            <div class="panel">
-                <div class="panel-header">
-                    <h3>Full Server Activity Feed</h3>
-                </div>
-                <div class="terminal-box" id="fullLogs" style="height: 600px;">
-                    <div class="empty-box">No logs captured yet.</div>
+                <div class="glass-box">
+                    <div class="glass-header">
+                        <h3>💎 GEMS VAULT RANKINGS</h3>
+                    </div>
+                    <div id="lbGems">
+                        <div class="empty-placeholder">Calculating balances...</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 6: MASTER ADMIN PANEL -->
-        <div id="tab-admin" class="tab-content">
-            <div class="panel" style="border-color: var(--neon-pink); box-shadow: 0 0 30px rgba(236,72,153,0.3);">
-                <div class="panel-header">
-                    <h3 style="color: var(--neon-pink);">⚡ MASTER SERVER CONTROL (VOIDPS)</h3>
-                    <span style="color: #34d399; font-weight: bold;">AUTHENTICATED</span>
+        <!-- TAB: LOGS -->
+        <div id="tab-logs" class="tab-panel">
+            <div class="glass-box">
+                <div class="glass-header">
+                    <h3>FULL SECURITY & SERVER LOGS</h3>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-                    <div class="mines-controls">
-                        <h4>📢 Global Server Broadcast</h4>
-                        <input type="text" id="adminBroadcastMsg" placeholder="Message to all players..." style="background:#0a0518; border:1px solid var(--border-purple); padding:10px; border-radius:8px; color:white;">
-                        <button class="btn-play" onclick="adminBroadcast()">SEND BROADCAST</button>
+                <div class="terminal-stream" id="fullLogStream" style="height: 560px;">
+                    <div class="empty-placeholder">Streaming...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: ADMIN -->
+        <div id="tab-admin" class="tab-panel">
+            <div class="glass-box" style="border-color: var(--lol-gold);">
+                <div class="glass-header">
+                    <h3 style="color:var(--lol-gold-bright);">⚡ VOIDPS MASTER CONTROL PANEL</h3>
+                    <span style="color:var(--online-green); font-weight:bold;">AUTHORIZED</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
+                    <div class="mines-panel">
+                        <h4>📢 Global World Broadcast</h4>
+                        <input type="text" id="broadcastText" placeholder="Broadcast message to server..." class="mines-input">
+                        <button class="btn-gold" onclick="sendBroadcast()">BROADCAST TO WORLD</button>
                     </div>
-                    <div class="mines-controls">
-                        <h4>⚡ Player Actions</h4>
-                        <input type="text" id="adminTargetPlayer" placeholder="Player Name" style="background:#0a0518; border:1px solid var(--border-purple); padding:10px; border-radius:8px; color:white;">
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-admin" style="flex:1; justify-content:center;" onclick="adminAction('kick')">Kick</button>
-                            <button class="btn-admin" style="flex:1; justify-content:center; background:#991b1b;" onclick="adminAction('ban')">Ban</button>
+                    <div class="mines-panel">
+                        <h4>⚡ Champion Punishment</h4>
+                        <input type="text" id="targetPlayer" placeholder="Player Name" class="mines-input">
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-gold" style="flex:1;" onclick="adminAction('kick')">KICK</button>
+                            <button class="btn-gold" style="flex:1; border-color:#f43f5e;" onclick="adminAction('ban')">BAN</button>
                         </div>
                     </div>
-                    <div class="mines-controls">
-                        <h4>💎 Grant Gems / Items</h4>
-                        <input type="text" id="grantPlayer" placeholder="Target Player" style="background:#0a0518; border:1px solid var(--border-purple); padding:8px; border-radius:8px; color:white;">
-                        <input type="number" id="grantGems" placeholder="Gems Amount" style="background:#0a0518; border:1px solid var(--border-purple); padding:8px; border-radius:8px; color:white;">
-                        <button class="btn-play" onclick="adminGrantGems()">GRANT GEMS</button>
+                    <div class="mines-panel">
+                        <h4>💎 Economy Grant</h4>
+                        <input type="text" id="grantTarget" placeholder="Target Player" class="mines-input">
+                        <input type="number" id="grantGemsAmt" placeholder="Gems Count" class="mines-input">
+                        <button class="btn-gold" onclick="sendGrantGems()">GRANT GEMS</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ADMIN LOGIN MODAL -->
-    <div class="modal-overlay" id="adminModal">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3>ADMIN AUTHENTICATION</h3>
-                <button class="close-btn" onclick="closeAdminModal()">&times;</button>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 14px;">
-                <div class="input-group">
-                    <label>Username</label>
-                    <input type="text" id="adminUser" placeholder="Enter username (voidps)">
+    <!-- Admin Dialog -->
+    <div class="modal-mask" id="adminModal">
+        <div class="modal-card">
+            <h3 style="font-family:'Cinzel',serif; color:var(--lol-gold-bright); font-size:20px; margin-bottom:20px; text-align:center;">ADMIN AUTHENTICATION</h3>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                <div>
+                    <label style="font-size:12px; color:var(--text-muted);">USERNAME</label>
+                    <input type="text" id="authUsername" placeholder="voidps" class="mines-input" style="margin-top:6px;">
                 </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="adminPass" placeholder="Enter password (voidpsadmin)">
+                <div>
+                    <label style="font-size:12px; color:var(--text-muted);">PASSWORD</label>
+                    <input type="password" id="authPassword" placeholder="voidpsadmin" class="mines-input" style="margin-top:6px;">
                 </div>
-                <div id="loginErr" style="color: var(--offline-red); font-size: 13px; display: none;"></div>
-                <button class="btn-play" style="margin-top: 10px;" onclick="submitAdminLogin()">LOGIN TO CONTROL</button>
+                <div id="authErr" style="color:var(--offline-red); font-size:13px; display:none;"></div>
+                <button class="btn-gold" style="margin-top:10px;" onclick="performAdminLogin()">LOGIN TO CONTROL</button>
+                <button class="btn-play-now" onclick="closeAdminDialog()">CANCEL</button>
             </div>
         </div>
     </div>
@@ -896,33 +847,80 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         let adminToken = localStorage.getItem('voidps_token') || null;
         let cachedPlayers = [];
 
-        function formatNum(n) { return Number(n || 0).toLocaleString(); }
+        function formatNumber(n) { return Number(n || 0).toLocaleString(); }
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        /* Animated Canvas Particles */
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = (Math.random() - 0.5) * 0.8;
+                this.speedY = (Math.random() - 0.5) * 0.8;
+                this.color = Math.random() > 0.5 ? 'rgba(0, 210, 255, 0.4)' : 'rgba(200, 170, 110, 0.3)';
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        /* Navigation */
+        function activateTab(tabId) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             const target = document.getElementById(tabId);
             if (target) target.classList.add('active');
             event.target.classList.add('active');
         }
 
-        function openAdminModal() {
+        function openAdminDialog() {
             if (adminToken) {
-                switchTab('tab-admin');
-                document.getElementById('adminTabBtn').classList.add('active');
+                activateTab('tab-admin');
+                document.getElementById('navAdminTab').classList.add('active');
             } else {
                 document.getElementById('adminModal').style.display = 'flex';
             }
         }
 
-        function closeAdminModal() {
+        function closeAdminDialog() {
             document.getElementById('adminModal').style.display = 'none';
         }
 
-        async function submitAdminLogin() {
-            const u = document.getElementById('adminUser').value;
-            const p = document.getElementById('adminPass').value;
-            const err = document.getElementById('loginErr');
+        async function performAdminLogin() {
+            const u = document.getElementById('authUsername').value;
+            const p = document.getElementById('authPassword').value;
+            const err = document.getElementById('authErr');
 
             try {
                 const res = await fetch('/api/admin/login', {
@@ -934,10 +932,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                 if (data.success) {
                     adminToken = data.token;
                     localStorage.setItem('voidps_token', adminToken);
-                    closeAdminModal();
-                    document.getElementById('adminTabBtn').style.display = 'flex';
-                    document.getElementById('adminBtnTxt').innerText = 'Admin Panel';
-                    switchTab('tab-admin');
+                    closeAdminDialog();
+                    document.getElementById('navAdminTab').style.display = 'block';
+                    document.getElementById('btnAdminAuth').innerText = 'CONTROL PANEL';
+                    activateTab('tab-admin');
                 } else {
                     err.innerText = data.error || 'Invalid credentials';
                     err.style.display = 'block';
@@ -949,102 +947,114 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         if (adminToken) {
-            document.getElementById('adminTabBtn').style.display = 'flex';
-            document.getElementById('adminBtnTxt').innerText = 'Admin Panel';
+            document.getElementById('navAdminTab').style.display = 'block';
+            document.getElementById('btnAdminAuth').innerText = 'CONTROL PANEL';
         }
 
-        async function fetchServerStatus() {
+        /* Item Icon Helper */
+        function renderItemIcon(itemID) {
+            const id = Number(itemID);
+            if (id === 7188) return '<span class="gt-icon icon-bgl">💎</span>';
+            if (id === 1796) return '<span class="gt-icon icon-dl">💠</span>';
+            if (id === 242) return '<span class="gt-icon icon-wl">🔒</span>';
+            if (id === 112) return '<span class="gt-icon icon-gems">✨</span>';
+            if (id === 3898) return '<span class="gt-icon">☎️</span>';
+            if (id === 1008) return '<span class="gt-icon">🏧</span>';
+            return '<span class="gt-icon">📦</span>';
+        }
+
+        async function fetchServerFeed() {
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
 
                 const isOnline = data.status === 'ONLINE';
-                const light = document.getElementById('statusLight');
-                const txt = document.getElementById('statusTxt');
-                const state = document.getElementById('sState');
+                const heroDot = document.getElementById('heroStatusDot');
+                const heroTxt = document.getElementById('heroStatusText');
 
                 if (isOnline) {
-                    light.className = 'status-light online';
-                    txt.innerText = 'ONLINE';
-                    txt.style.color = 'var(--online-green)';
-                    state.innerText = 'ONLINE';
-                    state.style.color = 'var(--online-green)';
+                    heroDot.style.background = 'var(--online-green)';
+                    heroDot.style.boxShadow = '0 0 10px var(--online-green)';
+                    heroTxt.innerText = 'SERVER ONLINE';
                 } else {
-                    light.className = 'status-light';
-                    txt.innerText = 'OFFLINE';
-                    txt.style.color = 'var(--offline-red)';
-                    state.innerText = 'OFFLINE';
-                    state.style.color = 'var(--offline-red)';
+                    heroDot.style.background = 'var(--offline-red)';
+                    heroDot.style.boxShadow = '0 0 10px var(--offline-red)';
+                    heroTxt.innerText = 'SERVER OFFLINE';
                 }
 
-                document.getElementById('sPort').innerText = data.port || 25741;
-                document.getElementById('sPlayers').innerText = data.playerCount || 0;
-                document.getElementById('playerCounter').innerText = (data.playerCount || 0) + ' Active';
+                document.getElementById('cardPort').innerText = data.port || 25741;
+                document.getElementById('cardOnline').innerText = data.playerCount || 0;
+                document.getElementById('heroPlayerCount').innerText = (data.playerCount || 0) + ' PLAYERS ONLINE';
+                document.getElementById('playerBadge').innerText = (data.playerCount || 0) + ' ONLINE';
 
                 cachedPlayers = data.players || [];
-                renderPlayers(cachedPlayers);
+                renderPlayerList(cachedPlayers);
                 renderLogs(data.logs || []);
                 renderLeaderboards(cachedPlayers);
-            } catch (err) {
-                console.error(err);
+            } catch (e) {
+                console.error(e);
             }
         }
 
-        function renderPlayers(players) {
-            const ov = document.getElementById('overviewPlayerList');
-            const full = document.getElementById('fullPlayerList');
+        function renderPlayerList(players) {
+            const live = document.getElementById('livePlayerList');
+            const roster = document.getElementById('rosterList');
 
             if (!players || players.length === 0) {
-                const empty = '<div class="empty-box">No players currently online.</div>';
-                ov.innerHTML = empty;
-                full.innerHTML = empty;
+                const empty = '<div class="empty-placeholder">No champions currently online.</div>';
+                live.innerHTML = empty;
+                roster.innerHTML = empty;
                 return;
             }
 
             const html = players.map(p => \`
-                <div class="player-item">
+                <div class="player-row">
                     <div>
-                        <div class="player-name">👑 \${p.name}</div>
-                        <div class="player-world">📍 World: <b>\${p.world}</b></div>
+                        <div class="player-title">👑 \${p.name}</div>
+                        <div class="player-loc">📍 World: <b>\${p.world}</b></div>
                     </div>
-                    <div class="player-meta">
-                        <div class="player-gems">💎 \${formatNum(p.gems)} Gems</div>
-                        <div class="player-lvl">Level \${p.level} • \${p.wl} WL</div>
+                    <div class="player-wealth">
+                        <div style="color:var(--text-gold); font-weight:700;">
+                            \${renderItemIcon(112)} \${formatNumber(p.gems)} Gems
+                        </div>
+                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                            Level \${p.level} • \${renderItemIcon(242)} \${p.wl} WL
+                        </div>
                     </div>
                 </div>
             \`).join('');
 
-            ov.innerHTML = html;
-            full.innerHTML = html;
+            live.innerHTML = html;
+            roster.innerHTML = html;
         }
 
         function renderLogs(logs) {
-            const ov = document.getElementById('overviewLogs');
-            const full = document.getElementById('fullLogs');
+            const live = document.getElementById('liveLogs');
+            const full = document.getElementById('fullLogStream');
 
             if (!logs || logs.length === 0) {
-                const empty = '<div class="empty-box">No activity logs recorded.</div>';
-                ov.innerHTML = empty;
+                const empty = '<div class="empty-placeholder">No activity logs recorded.</div>';
+                live.innerHTML = empty;
                 full.innerHTML = empty;
                 return;
             }
 
             const html = logs.map(l => {
-                let tagClass = 'tag-chat';
-                if (l.type === 'LOGIN') tagClass = 'tag-login';
-                if (l.type === 'LOGOUT') tagClass = 'tag-logout';
-                if (l.type === 'WORLD') tagClass = 'tag-world';
+                let badgeClass = 'badge-chat';
+                if (l.type === 'LOGIN') badgeClass = 'badge-login';
+                if (l.type === 'LOGOUT') badgeClass = 'badge-logout';
+                if (l.type === 'WORLD') badgeClass = 'badge-world';
 
                 return \`
-                    <div class="log-row">
-                        <span class="log-t">[\${l.time}]</span>
-                        <span class="log-tag \${tagClass}">\${l.type}</span>
+                    <div class="log-line">
+                        <span style="color:#64748b;">[\${l.time}]</span>
+                        <span class="log-badge \${badgeClass}">\${l.type}</span>
                         <span>\${l.text}</span>
                     </div>
                 \`;
             }).join('');
 
-            ov.innerHTML = html;
+            live.innerHTML = html;
             full.innerHTML = html;
         }
 
@@ -1053,8 +1063,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             const lbG = document.getElementById('lbGems');
 
             if (!players || players.length === 0) {
-                lbR.innerHTML = '<div class="empty-box">No data.</div>';
-                lbG.innerHTML = '<div class="empty-box">No data.</div>';
+                lbR.innerHTML = '<div class="empty-placeholder">No data.</div>';
+                lbG.innerHTML = '<div class="empty-placeholder">No data.</div>';
                 return;
             }
 
@@ -1062,47 +1072,50 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             const sortedGems = [...players].sort((a,b) => (b.gems || 0) - (a.gems || 0));
 
             lbR.innerHTML = sortedWL.slice(0, 5).map((p, i) => \`
-                <div class="player-item">
-                    <div class="player-name">#\${i+1} \${p.name}</div>
-                    <div class="player-meta"><span style="color:var(--neon-gold); font-weight:bold;">\${formatNum(p.wl)} WL</span></div>
+                <div class="player-row">
+                    <div class="player-title">#\${i+1} \${p.name}</div>
+                    <div style="color:var(--text-gold); font-weight:bold;">
+                        \${renderItemIcon(242)} \${formatNumber(p.wl)} WL
+                    </div>
                 </div>
             \`).join('');
 
             lbG.innerHTML = sortedGems.slice(0, 5).map((p, i) => \`
-                <div class="player-item">
-                    <div class="player-name">#\${i+1} \${p.name}</div>
-                    <div class="player-meta"><span style="color:var(--neon-purple); font-weight:bold;">\${formatNum(p.gems)} Gems</span></div>
+                <div class="player-row">
+                    <div class="player-title">#\${i+1} \${p.name}</div>
+                    <div style="color:var(--lol-blue-glow); font-weight:bold;">
+                        \${renderItemIcon(112)} \${formatNumber(p.gems)} Gems
+                    </div>
                 </div>
             \`).join('');
         }
 
-        function filterPlayers() {
-            const q = document.getElementById('playerSearch').value.toLowerCase();
+        function applyPlayerFilter() {
+            const q = document.getElementById('playerFilter').value.toLowerCase();
             const filtered = cachedPlayers.filter(p => p.name.toLowerCase().includes(q) || p.world.toLowerCase().includes(q));
-            renderPlayers(filtered);
+            renderPlayerList(filtered);
         }
 
-        /* MINES GAME LOGIC */
+        /* Mines Game */
         let minesActive = false;
         let minesMap = [];
-        let gemsFound = 0;
         let currentMultiplier = 1.00;
         let currentBet = 1000;
 
-        function initMinesGrid() {
+        function buildMinesGrid() {
             const grid = document.getElementById('minesGrid');
             grid.innerHTML = '';
             for (let i = 0; i < 25; i++) {
-                const t = document.createElement('div');
-                t.className = 'mine-tile';
-                t.innerText = '❓';
-                t.onclick = () => revealMine(i);
-                grid.appendChild(t);
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.innerText = '❓';
+                cell.onclick = () => onCellClick(i);
+                grid.appendChild(cell);
             }
         }
-        initMinesGrid();
+        buildMinesGrid();
 
-        function startMinesGame() {
+        function startMines() {
             currentBet = Number(document.getElementById('mineBet').value) || 1000;
             const bombCount = Number(document.getElementById('mineBombs').value) || 3;
 
@@ -1117,39 +1130,37 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             }
 
             minesActive = true;
-            gemsFound = 0;
             currentMultiplier = 1.00;
             document.getElementById('mineMultiplier').innerText = '1.00x';
             document.getElementById('btnStartMines').style.display = 'none';
-            document.getElementById('btnCashout').style.display = 'block';
-            document.getElementById('btnCashout').innerText = \`CASHOUT (\${formatNum(currentBet)} Gems)\`;
-            initMinesGrid();
+            document.getElementById('btnCashoutMines').style.display = 'block';
+            document.getElementById('btnCashoutMines').innerText = \`CASHOUT (\${formatNumber(currentBet)} Gems)\`;
+            buildMinesGrid();
         }
 
-        function revealMine(index) {
+        function onCellClick(index) {
             if (!minesActive) return;
             const grid = document.getElementById('minesGrid');
-            const tile = grid.children[index];
-            if (tile.classList.contains('revealed-gem') || tile.classList.contains('revealed-bomb')) return;
+            const cell = grid.children[index];
+            if (cell.classList.contains('hit-gem') || cell.classList.contains('hit-bomb')) return;
 
             if (minesMap[index] === 'BOMB') {
-                tile.className = 'mine-tile revealed-bomb';
-                tile.innerText = '💣';
+                cell.className = 'grid-cell hit-bomb';
+                cell.innerText = '💣';
                 minesActive = false;
                 document.getElementById('btnStartMines').style.display = 'block';
-                document.getElementById('btnCashout').style.display = 'none';
+                document.getElementById('btnCashoutMines').style.display = 'none';
                 document.getElementById('mineMultiplier').innerText = '0.00x (BUST)';
                 for (let i = 0; i < 25; i++) {
                     if (minesMap[i] === 'BOMB') grid.children[i].innerText = '💣';
                 }
             } else {
-                tile.className = 'mine-tile revealed-gem';
-                tile.innerText = '💎';
-                gemsFound++;
-                currentMultiplier = (currentMultiplier * 1.22).toFixed(2);
+                cell.className = 'grid-cell hit-gem';
+                cell.innerText = '💎';
+                currentMultiplier = (currentMultiplier * 1.25).toFixed(2);
                 document.getElementById('mineMultiplier').innerText = currentMultiplier + 'x';
                 const win = Math.floor(currentBet * currentMultiplier);
-                document.getElementById('btnCashout').innerText = \`CASHOUT (\${formatNum(win)} Gems)\`;
+                document.getElementById('btnCashoutMines').innerText = \`CASHOUT (\${formatNumber(win)} Gems)\`;
             }
         }
 
@@ -1157,13 +1168,13 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             if (!minesActive) return;
             minesActive = false;
             const win = Math.floor(currentBet * currentMultiplier);
-            alert(\`🎉 CASHOUT SUCCESS! You won \${formatNum(win)} Gems (\${currentMultiplier}x)!\`);
+            alert(\`🎉 CASHOUT! You won \${formatNumber(win)} Gems (\${currentMultiplier}x)!\`);
             document.getElementById('btnStartMines').style.display = 'block';
-            document.getElementById('btnCashout').style.display = 'none';
+            document.getElementById('btnCashoutMines').style.display = 'none';
         }
 
-        setInterval(fetchServerStatus, 2500);
-        fetchServerStatus();
+        setInterval(fetchServerFeed, 2500);
+        fetchServerFeed();
     </script>
 </body>
 </html>`;
@@ -1174,6 +1185,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`VOIDPS Master Dashboard running on port ${PORT}`);
-    console.log(`Connected to GTPS Cloud Gateway: ${GTPS_CLOUD_API}`);
+    console.log(`VOIDPS League-Themed Master Control running on port ${PORT}`);
 });
