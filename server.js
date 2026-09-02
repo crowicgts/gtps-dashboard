@@ -6,7 +6,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const GTPS_PORT = process.env.GTPS_PORT || 25741;
 const GTPS_CLOUD_API = `https://api.gtps.cloud/g-api/${GTPS_PORT}/status`;
-const GTPS_CLOUD_EXEC_API = `https://api.gtps.cloud/g-api/${GTPS_PORT}/exec`;
 
 app.use(cors());
 app.use(express.json());
@@ -36,7 +35,7 @@ async function pollGTPSCloud() {
                 port: data.port || GTPS_PORT,
                 playerCount: data.playerCount || (data.players ? data.players.length : 0),
                 players: data.players || [],
-                logs: data.logs || serverData.logs || []
+                logs: data.logs || []
             };
         } else {
             serverData.status = "OFFLINE";
@@ -53,804 +52,940 @@ app.get('/api/status', (req, res) => {
     res.json(serverData);
 });
 
-app.post('/api/admin/login', (req, res) => {
-    const { username, password } = req.body;
-    if (username === "voidps" && password === "voidpsadmin") {
-        return res.json({ success: true, token: "voidps_auth_token_999888" });
-    }
-    return res.status(401).json({ success: false, error: "Invalid username or password" });
-});
-
-app.post('/api/admin/action', async (req, res) => {
-    const { token, action, payload } = req.body;
-    if (token !== "voidps_auth_token_999888") {
-        return res.status(403).json({ error: "Unauthorized" });
-    }
-
-    try {
-        const response = await fetch(GTPS_CLOUD_EXEC_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action, payload })
-        });
-        const result = await response.json().catch(() => ({ success: true }));
-        return res.json({ success: true, result });
-    } catch (e) {
-        return res.json({ success: true, message: "Action queued" });
-    }
-});
-
 const DASHBOARD_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOIDPS • Official Growtopia Realm</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>VOIDPS • Official Growtopia Private Server</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #030712;
-            --lol-gold: #c8aa6e;
-            --lol-gold-bright: #f0e6d2;
-            --lol-blue-glow: #00d2ff;
-            --lol-deep-blue: #091428;
-            --lol-panel-bg: rgba(9, 20, 40, 0.85);
-            --lol-border: #1e3a5f;
-            --lol-border-active: #c8aa6e;
-            --neon-cyan: #38bdf8;
-            --text-gold: #c8aa6e;
-            --text-main: #f0e6d2;
-            --text-muted: #a09b8c;
+            --bg-black: #050005;
+            --bg-card: rgba(18, 4, 12, 0.85);
+            --bg-card-dark: #0a0108;
+            --neon-red: #ff0044;
+            --neon-crimson: #e11d48;
+            --neon-glow: rgba(255, 0, 68, 0.4);
+            --red-border: rgba(255, 0, 68, 0.45);
+            --text-main: #ffffff;
+            --text-muted: #fda4af;
             --online-green: #00ff88;
-            --offline-red: #ff3366;
+            --offline-red: #ff0044;
+            --cyan-accent: #38bdf8;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
 
         body {
-            background-color: var(--bg-dark);
+            background-color: var(--bg-black);
             color: var(--text-main);
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 0, 68, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 20%, rgba(225, 29, 72, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 50% 85%, rgba(136, 19, 55, 0.2) 0%, transparent 50%);
         }
 
-        /* Animated Canvas Particles */
-        #bg-canvas {
+        /* Lightning & Particle Canvas */
+        #lightning-canvas {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
             pointer-events: none;
             z-index: 0;
         }
 
-        /* Top LoL Style Navigation Bar */
-        .top-navbar {
+        /* Top Navigation */
+        .navbar {
             position: relative;
             z-index: 10;
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 0 40px;
-            height: 72px;
-            background: rgba(4, 10, 20, 0.95);
-            border-bottom: 2px solid #1e282d;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 210, 255, 0.15);
+            height: 74px;
+            background: rgba(8, 1, 5, 0.95);
+            border-bottom: 2px solid var(--red-border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 0, 68, 0.2);
         }
 
-        .nav-brand {
+        .nav-logo {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
         }
 
-        .nav-logo-text {
-            font-family: 'Cinzel', serif;
-            font-size: 24px;
+        .nav-logo-icon {
+            font-size: 26px;
+            filter: drop-shadow(0 0 10px var(--neon-red));
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 16px var(--neon-red)); }
+        }
+
+        .nav-logo h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 26px;
             font-weight: 900;
             letter-spacing: 3px;
-            background: linear-gradient(180deg, #fff, #c8aa6e 60%, #785a28);
+            background: linear-gradient(180deg, #ffffff, #ff0044);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px rgba(200, 170, 110, 0.5);
         }
 
-        .nav-links {
-            display: flex;
-            gap: 24px;
-            height: 100%;
-            align-items: center;
-        }
-
-        .nav-link {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 8px 12px;
-            position: relative;
-            transition: all 0.25s ease;
-        }
-
-        .nav-link:hover {
-            color: #ffffff;
-            text-shadow: 0 0 10px var(--lol-blue-glow);
-        }
-
-        .nav-link.active {
-            color: var(--lol-gold-bright);
-        }
-
-        .nav-link.active::after {
-            content: '';
-            position: absolute;
-            bottom: -16px; left: 0; width: 100%; height: 3px;
-            background: linear-gradient(90deg, transparent, var(--lol-blue-glow), transparent);
-            box-shadow: 0 0 10px var(--lol-blue-glow);
-        }
-
-        .nav-auth {
+        .nav-controls {
             display: flex;
             align-items: center;
             gap: 16px;
         }
 
-        .btn-play-now {
-            font-family: 'Cinzel', serif;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            background: linear-gradient(180deg, #1e3a5f, #0a1428);
-            border: 2px solid var(--lol-blue-glow);
-            color: #ffffff;
-            padding: 10px 24px;
-            border-radius: 2px;
+        .lang-switch-btn {
+            background: rgba(255, 0, 68, 0.15);
+            border: 1px solid var(--red-border);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4), inset 0 0 10px rgba(0, 210, 255, 0.2);
-            transition: all 0.3s ease;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
         }
 
-        .btn-play-now:hover {
-            background: linear-gradient(180deg, #00d2ff, #091428);
-            box-shadow: 0 0 25px rgba(0, 210, 255, 0.8), inset 0 0 15px rgba(0, 210, 255, 0.5);
+        .lang-switch-btn:hover {
+            background: rgba(255, 0, 68, 0.35);
+            box-shadow: 0 0 15px var(--neon-glow);
             transform: translateY(-2px);
         }
 
         /* Hero Banner */
-        .hero-banner {
+        .hero {
             position: relative;
             z-index: 1;
-            height: 380px;
-            background: radial-gradient(circle at 70% 30%, rgba(0, 210, 255, 0.2) 0%, transparent 60%),
-                        linear-gradient(180deg, rgba(3, 7, 18, 0.3) 0%, #030712 100%),
-                        url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1600&auto=format&fit=crop') center/cover;
-            display: flex;
-            align-items: center;
-            padding: 0 60px;
-            border-bottom: 2px solid rgba(0, 210, 255, 0.3);
-            box-shadow: inset 0 -40px 60px #030712;
+            padding: 80px 20px 40px 20px;
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
         }
 
-        .hero-content {
-            max-width: 650px;
-        }
-
-        .hero-tag {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 4px;
-            color: var(--lol-blue-glow);
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .hero-title {
-            font-family: 'Cinzel', serif;
-            font-size: 52px;
+        .hero h2 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
             font-weight: 900;
-            letter-spacing: 3px;
-            background: linear-gradient(180deg, #ffffff, #c8aa6e 60%, #946c24);
+            letter-spacing: 2px;
+            background: linear-gradient(180deg, #ffffff, #ff4d6d, #ff0044);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(0, 210, 255, 0.4);
-            line-height: 1.1;
-            margin-bottom: 16px;
+            text-shadow: 0 0 30px rgba(255, 0, 68, 0.5);
+            margin-bottom: 14px;
+            line-height: 1.2;
         }
 
-        .hero-desc {
+        .hero p {
             color: var(--text-muted);
-            font-size: 15px;
+            font-size: 16px;
+            margin-bottom: 30px;
             line-height: 1.6;
-            margin-bottom: 24px;
         }
 
-        .hero-stats {
+        .hero-action-buttons {
             display: flex;
+            justify-content: center;
             gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 36px;
         }
 
-        .hero-stat-pill {
-            background: rgba(9, 20, 40, 0.85);
-            border: 1px solid var(--lol-border);
-            padding: 8px 18px;
-            border-radius: 4px;
+        .btn-glow-red {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #e11d48, #ff0044);
+            border: 2px solid #ff4d6d;
+            color: #ffffff;
+            padding: 14px 34px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(255, 0, 68, 0.6);
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             gap: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
         }
 
-        .main-container {
-            max-width: 1400px;
-            margin: -30px auto 40px auto;
-            padding: 0 30px;
-            position: relative;
-            z-index: 2;
+        .btn-glow-red:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 0 40px rgba(255, 0, 68, 0.9);
+            filter: brightness(1.15);
         }
 
-        /* League Style Featured Grid */
-        .featured-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        @media (max-width: 1100px) { .featured-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .featured-grid { grid-template-columns: 1fr; } }
-
-        .feature-card {
-            background: linear-gradient(180deg, rgba(16, 32, 60, 0.7), rgba(9, 20, 40, 0.95));
-            border: 1px solid var(--lol-border);
-            border-radius: 4px;
-            padding: 20px;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-        }
-
-        .feature-card:hover {
-            border-color: var(--lol-blue-glow);
-            transform: translateY(-4px);
-            box-shadow: 0 12px 35px rgba(0, 210, 255, 0.25);
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 2px;
-            background: linear-gradient(90deg, transparent, var(--lol-blue-glow), transparent);
-        }
-
-        .feature-card h4 {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 13px;
+        .btn-glow-store {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 15px;
+            font-weight: 800;
             letter-spacing: 2px;
             text-transform: uppercase;
+            background: rgba(20, 3, 10, 0.85);
+            border: 2px solid var(--red-border);
+            color: #ff99aa;
+            padding: 14px 34px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-glow-store:hover {
+            background: rgba(40, 6, 20, 0.95);
+            border-color: var(--neon-red);
+            color: #fff;
+            box-shadow: 0 0 25px var(--neon-glow);
+            transform: translateY(-3px);
+        }
+
+        /* Live Status Bar */
+        .status-container {
+            max-width: 900px;
+            margin: 0 auto 50px auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            position: relative;
+            z-index: 1;
+            padding: 0 20px;
+        }
+
+        @media (max-width: 650px) { .status-container { grid-template-columns: 1fr; } }
+
+        .status-card {
+            background: var(--bg-card);
+            border: 1px solid var(--red-border);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            text-align: center;
+            transition: all 0.25s ease;
+        }
+
+        .status-card:hover {
+            border-color: var(--neon-red);
+            box-shadow: 0 0 25px var(--neon-glow);
+            transform: translateY(-2px);
+        }
+
+        .status-card h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
             color: var(--text-muted);
             margin-bottom: 6px;
         }
 
-        .feature-card .val {
-            font-family: 'Cinzel', serif;
-            font-size: 28px;
+        .status-card .val {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 26px;
             font-weight: 800;
             color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* How To Play Section (Matching User Screenshots) */
+        .tutorial-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(12px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .tutorial-box {
+            background: #080206;
+            border: 2px solid var(--neon-red);
+            border-radius: 16px;
+            width: 820px;
+            max-width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 50px rgba(255, 0, 68, 0.5);
+            padding: 30px;
+            animation: popIn 0.25s ease;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .tutorial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--red-border);
+        }
+
+        .tutorial-header h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            color: #ff4d6d;
+            letter-spacing: 2px;
+        }
+
+        .platform-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .plat-btn {
+            background: rgba(20, 4, 12, 0.8);
+            border: 1px solid var(--red-border);
+            color: var(--text-muted);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        /* Tab Content Panels */
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; animation: fadeIn 0.3s ease; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+        .plat-btn:hover {
+            color: white;
+            border-color: var(--neon-red);
         }
 
-        .dashboard-layout {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 24px;
+        .plat-btn.active {
+            background: linear-gradient(135deg, #e11d48, #ff0044);
+            border-color: #ff4d6d;
+            color: white;
+            box-shadow: 0 0 20px var(--neon-glow);
         }
 
-        @media (max-width: 960px) { .dashboard-layout { grid-template-columns: 1fr; } }
-
-        .glass-box {
-            background: var(--lol-panel-bg);
-            border: 1px solid var(--lol-border);
-            border-radius: 4px;
+        /* Step Guide Card */
+        .guide-container {
+            background: #0f030a;
+            border: 1px solid var(--red-border);
+            border-radius: 12px;
             padding: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.7);
-        }
-
-        .glass-header {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #1e3a5f;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        .glass-header h3 {
-            font-family: 'Cinzel', serif;
-            font-size: 18px;
-            letter-spacing: 2px;
-            color: var(--lol-gold-bright);
+        .step-item {
+            display: flex;
+            gap: 16px;
         }
 
-        /* Item Icon Component */
-        .gt-icon {
-            display: inline-flex;
+        .step-num {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: rgba(255, 0, 68, 0.2);
+            border: 2px solid var(--neon-red);
+            color: #ffffff;
+            display: flex;
             align-items: center;
             justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 4px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(200, 170, 110, 0.4);
-            font-size: 16px;
-            vertical-align: middle;
+            font-weight: 800;
+            font-size: 15px;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px var(--neon-glow);
         }
 
-        .icon-bgl { border-color: #38bdf8; box-shadow: 0 0 10px rgba(56, 189, 248, 0.4); }
-        .icon-dl { border-color: #60a5fa; box-shadow: 0 0 8px rgba(96, 165, 250, 0.4); }
-        .icon-wl { border-color: #fbbf24; }
-        .icon-gems { border-color: #ec4899; }
+        .step-content h4 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
 
-        /* Player Item Row */
-        .player-row {
-            display: flex;
-            justify-content: space-between;
+        .step-content p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .code-snippet {
+            background: #000000;
+            border: 1px solid #330514;
+            padding: 10px 14px;
+            border-radius: 6px;
+            color: #38bdf8;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 8px;
+            word-break: break-all;
+        }
+
+        .guide-btn {
+            background: rgba(255, 0, 68, 0.2);
+            border: 1px solid var(--neon-red);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            margin-top: 10px;
+            display: inline-flex;
             align-items: center;
-            background: rgba(4, 10, 20, 0.7);
-            border: 1px solid #142845;
-            padding: 14px 18px;
-            margin-bottom: 10px;
-            border-radius: 2px;
+            gap: 6px;
             transition: all 0.2s ease;
         }
 
-        .player-row:hover {
-            border-color: var(--lol-blue-glow);
-            background: rgba(10, 26, 52, 0.9);
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
-            transform: translateX(4px);
+        .guide-btn:hover {
+            background: var(--neon-red);
+            box-shadow: 0 0 15px var(--neon-glow);
         }
 
-        .player-title {
-            font-weight: 700;
-            font-size: 15px;
-            color: #ffffff;
+        .apk-card {
+            background: rgba(255, 0, 68, 0.08);
+            border: 1px dashed var(--neon-red);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        /* Language Welcome Overlay Modal */
+        .lang-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(14px);
+            z-index: 200;
             display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lang-box {
+            background: #0c0208;
+            border: 2px solid var(--neon-red);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 480px;
+            width: 90%;
+            box-shadow: 0 0 60px rgba(255, 0, 68, 0.6);
+            animation: popIn 0.3s ease;
+        }
+
+        .lang-box h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 22px;
+            color: #ffffff;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .lang-options {
+            display: flex;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .lang-choice-btn {
+            flex: 1;
+            background: rgba(20, 4, 12, 0.85);
+            border: 2px solid var(--red-border);
+            padding: 18px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 800;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             gap: 10px;
         }
 
-        .player-loc {
-            font-size: 12px;
-            color: var(--neon-cyan);
-            margin-top: 2px;
+        .lang-choice-btn:hover {
+            border-color: var(--neon-red);
+            background: rgba(255, 0, 68, 0.2);
+            box-shadow: 0 0 25px var(--neon-glow);
+            transform: translateY(-4px);
         }
 
-        .player-wealth {
-            text-align: right;
-        }
-
-        /* Terminal Logs */
-        .terminal-stream {
-            background: #02050d;
-            border: 1px solid #102035;
-            padding: 16px;
-            height: 500px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-        }
-
-        .log-line {
-            margin-bottom: 8px;
-            line-height: 1.4;
-            word-break: break-all;
-        }
-
-        .log-badge {
-            padding: 2px 6px;
-            border-radius: 2px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-right: 6px;
-            text-transform: uppercase;
-        }
-
-        .badge-login { background: #064e3b; color: #34d399; border: 1px solid #059669; }
-        .badge-logout { background: #881337; color: #f43f5e; border: 1px solid #be123c; }
-        .badge-chat { background: #1e3a8a; color: #60a5fa; border: 1px solid #2563eb; }
-        .badge-world { background: #581c87; color: #c084fc; border: 1px solid #7e22ce; }
-
-        /* Mines Game */
-        .mines-container {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 24px;
-        }
-
-        @media (max-width: 860px) { .mines-container { grid-template-columns: 1fr; } }
-
-        .mines-panel {
-            background: var(--lol-panel-bg);
-            border: 1px solid var(--lol-border);
-            padding: 24px;
-            border-radius: 4px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .mines-input {
-            width: 100%;
-            background: #040a14;
-            border: 1px solid #1e3a5f;
-            padding: 12px;
-            color: #ffffff;
-            border-radius: 2px;
-            font-size: 14px;
-            outline: none;
-        }
-
-        .mines-input:focus {
-            border-color: var(--lol-blue-glow);
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);
-        }
-
-        .btn-gold {
-            font-family: 'Cinzel', serif;
-            font-size: 14px;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            background: linear-gradient(180deg, #785a28, #463714);
-            border: 2px solid var(--lol-gold);
-            color: var(--lol-gold-bright);
-            padding: 14px;
-            border-radius: 2px;
-            cursor: pointer;
-            box-shadow: 0 0 20px rgba(200, 170, 110, 0.3);
-            transition: all 0.25s ease;
-        }
-
-        .btn-gold:hover {
-            background: linear-gradient(180deg, #c8aa6e, #785a28);
-            color: #000;
-            box-shadow: 0 0 30px rgba(200, 170, 110, 0.8);
-            transform: translateY(-2px);
-        }
-
-        .mines-board-box {
-            background: var(--lol-panel-bg);
-            border: 1px solid var(--lol-border);
-            padding: 24px;
-            border-radius: 4px;
-            display: flex;
+        .gt-icon {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .mines-grid-matrix {
-            display: grid;
-            grid-template-columns: repeat(5, 75px);
-            grid-template-rows: repeat(5, 75px);
-            gap: 12px;
-        }
-
-        @media (max-width: 500px) {
-            .mines-grid-matrix {
-                grid-template-columns: repeat(5, 55px);
-                grid-template-rows: repeat(5, 55px);
-                gap: 8px;
-            }
-        }
-
-        .grid-cell {
-            background: #091428;
-            border: 2px solid #1e3a5f;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            user-select: none;
-        }
-
-        .grid-cell:hover {
-            border-color: var(--lol-blue-glow);
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.5);
-            transform: scale(1.05);
-        }
-
-        .grid-cell.hit-gem {
-            background: linear-gradient(180deg, #064e3b, #065f46);
-            border-color: #34d399;
-            box-shadow: 0 0 20px #10b981;
-        }
-
-        .grid-cell.hit-bomb {
-            background: linear-gradient(180deg, #881337, #9f1239);
-            border-color: #f43f5e;
-            box-shadow: 0 0 25px #f43f5e;
-        }
-
-        /* Modal Overlay */
-        .modal-mask {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
-            z-index: 100;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-card {
-            background: #091428;
-            border: 2px solid var(--lol-gold);
-            border-radius: 4px;
-            padding: 36px;
-            width: 440px;
-            max-width: 90%;
-            box-shadow: 0 0 50px rgba(200, 170, 110, 0.4);
-        }
-
-        .empty-placeholder {
-            text-align: center;
-            padding: 40px;
-            color: var(--text-muted);
+            width: 24px;
+            height: 24px;
+            vertical-align: middle;
         }
     </style>
 </head>
 <body>
-    <canvas id="bg-canvas"></canvas>
+    <canvas id="lightning-canvas"></canvas>
 
-    <nav class="top-navbar">
-        <div class="nav-brand">
-            <span style="font-size: 28px;">⚡</span>
-            <span class="nav-logo-text">VOIDPS</span>
+    <!-- Language Selector Popup -->
+    <div class="lang-modal" id="langModal">
+        <div class="lang-box">
+            <span style="font-size: 40px; filter: drop-shadow(0 0 15px var(--neon-red));">⚡</span>
+            <h3>SELECT LANGUAGE</h3>
+            <p style="color: var(--text-muted); font-size: 14px;">PILIH BAHASA ANDA UNTUK MELANJUTKAN</p>
+            <div class="lang-options">
+                <button class="lang-choice-btn" onclick="setLanguage('en')">
+                    <span style="font-size: 32px;">🇬🇧</span>
+                    <span>ENGLISH</span>
+                </button>
+                <button class="lang-choice-btn" onclick="setLanguage('id')">
+                    <span style="font-size: 32px;">🇮🇩</span>
+                    <span>INDONESIA</span>
+                </button>
+            </div>
         </div>
-        <div class="nav-links">
-            <div class="nav-link active" onclick="activateTab('tab-live')">REALM STATUS</div>
-            <div class="nav-link" onclick="activateTab('tab-players')">ROSTER</div>
-            <div class="nav-link" onclick="activateTab('tab-mines')">MINES CASINO</div>
-            <div class="nav-link" onclick="activateTab('tab-leaderboard')">HALL OF FAME</div>
-            <div class="nav-link" onclick="activateTab('tab-logs')">SERVER LOGS</div>
-            <div class="nav-link" id="navAdminTab" style="display:none;" onclick="activateTab('tab-admin')">⚡ MASTER CONTROL</div>
+    </div>
+
+    <!-- Top Navigation -->
+    <nav class="navbar">
+        <div class="nav-logo">
+            <span class="nav-logo-icon">⚡</span>
+            <h1>VOIDPS</h1>
         </div>
-        <div class="nav-auth">
-            <button class="btn-play-now" id="btnAdminAuth" onclick="openAdminDialog()">ADMIN LOGIN</button>
+        <div class="nav-controls">
+            <button class="lang-switch-btn" onclick="openLanguageModal()">
+                <span id="currentLangFlag">🇬🇧</span> <span id="currentLangText">ENGLISH</span>
+            </button>
         </div>
     </nav>
 
-    <div class="hero-banner">
-        <div class="hero-content">
-            <div class="hero-tag">
-                <span>⚡</span> LIVE REALM • PORT 25741
-            </div>
-            <h1 class="hero-title">ENTER THE REALM</h1>
-            <p class="hero-desc">Experience the ultimate Growtopia private server ecosystem. High performance, zero lag, live real-time world tracking, and exclusive economies.</p>
-            <div class="hero-stats">
-                <div class="hero-stat-pill">
-                    <span style="width:10px; height:10px; border-radius:50%; background:var(--online-green); box-shadow:0 0 10px var(--online-green);" id="heroStatusDot"></span>
-                    <span style="font-weight:700; letter-spacing:1px;" id="heroStatusText">SERVER ONLINE</span>
-                </div>
-                <div class="hero-stat-pill">
-                    <span style="color:var(--lol-blue-glow);">👑</span>
-                    <span style="font-weight:700;" id="heroPlayerCount">0 PLAYERS ONLINE</span>
-                </div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <h2 id="heroTitle">THE ULTIMATE GROWTOPIA REALM</h2>
+        <p id="heroDesc">Connect to the fastest, zero-lag GTPS Cloud server. Join thousands of champions, conquer custom bosses, and trade in our rich economy.</p>
+        
+        <div class="hero-action-buttons">
+            <button class="btn-glow-red" onclick="openTutorial('windows')">
+                <span>📖</span> <span id="btnHowToPlayText">HOW TO PLAY</span>
+            </button>
+            <button class="btn-glow-store" onclick="alert('Store coming soon!')">
+                <span>🛒</span> <span id="btnStoreText">SHOP ASSETS</span>
+            </button>
+        </div>
+    </section>
+
+    <!-- Live Status Cards -->
+    <section class="status-container">
+        <div class="status-card">
+            <h4 id="lblServerStatus">SERVER STATUS</h4>
+            <div class="val">
+                <span id="statusDot" style="width:12px; height:12px; border-radius:50%; background:var(--online-green); box-shadow:0 0 12px var(--online-green);"></span>
+                <span id="statusText">ONLINE</span>
             </div>
         </div>
-    </div>
-
-    <div class="main-container">
-        <!-- Featured Grid -->
-        <div class="featured-grid">
-            <div class="feature-card">
-                <h4>Active Realm Port</h4>
-                <div class="val" id="cardPort">25741</div>
-            </div>
-            <div class="feature-card">
-                <h4>Online Champions</h4>
-                <div class="val" id="cardOnline">0</div>
-            </div>
-            <div class="feature-card">
-                <h4>Top Currency</h4>
-                <div class="val">
-                    <span class="gt-icon icon-bgl">💎</span>
-                    <span style="font-size:18px; color:var(--neon-cyan);">BGL (7188)</span>
-                </div>
-            </div>
-            <div class="feature-card">
-                <h4>Server Engine</h4>
-                <div class="val" style="color:var(--online-green); font-size:22px;">GTPS CLOUD</div>
-            </div>
+        <div class="status-card">
+            <h4 id="lblOnlinePlayers">ONLINE PLAYERS</h4>
+            <div class="val" id="playerCountVal" style="color:#ff4d6d;">0</div>
         </div>
-
-        <!-- TAB: LIVE -->
-        <div id="tab-live" class="tab-panel active">
-            <div class="dashboard-layout">
-                <div class="glass-box">
-                    <div class="glass-header">
-                        <h3>ACTIVE PLAYERS</h3>
-                        <span id="playerBadge" style="color:var(--lol-blue-glow); font-weight:700;">0 ONLINE</span>
-                    </div>
-                    <div id="livePlayerList">
-                        <div class="empty-placeholder">Connecting to realm stream...</div>
-                    </div>
-                </div>
-
-                <div class="glass-box">
-                    <div class="glass-header">
-                        <h3>REALM ACTIVITY FEED</h3>
-                        <span style="color:var(--lol-gold); font-size:12px;">LIVE LOGS</span>
-                    </div>
-                    <div class="terminal-stream" id="liveLogs">
-                        <div class="empty-placeholder">Streaming server logs...</div>
-                    </div>
-                </div>
-            </div>
+        <div class="status-card">
+            <h4 id="lblServerPort">SERVER PORT</h4>
+            <div class="val" style="color:var(--cyan-accent);">25741</div>
         </div>
+    </section>
 
-        <!-- TAB: ROSTER -->
-        <div id="tab-players" class="tab-panel">
-            <div class="glass-box">
-                <div class="glass-header">
-                    <h3>ONLINE CHAMPIONS ROSTER</h3>
-                    <input type="text" id="playerFilter" placeholder="Search champion or world..." oninput="applyPlayerFilter()" class="mines-input" style="width:260px;">
-                </div>
-                <div id="rosterList">
-                    <div class="empty-placeholder">No champions currently online.</div>
-                </div>
+    <!-- Tutorial Modal (Exact match to screenshots) -->
+    <div class="tutorial-modal" id="tutorialModal">
+        <div class="tutorial-box">
+            <div class="tutorial-header">
+                <h3 id="tutorialModalTitle">HOW TO PLAY ON VOIDPS</h3>
+                <button onclick="closeTutorial()" style="background:transparent; border:none; color:var(--text-muted); font-size:26px; cursor:pointer;">&times;</button>
             </div>
-        </div>
 
-        <!-- TAB: MINES -->
-        <div id="tab-mines" class="tab-panel">
-            <div class="mines-container">
-                <div class="mines-panel">
-                    <h3 style="font-family:'Cinzel',serif; color:var(--lol-gold-bright); font-size:18px;">💣 MINES CASINO</h3>
-                    <div>
-                        <label style="font-size:12px; color:var(--text-muted); font-weight:bold;">BET AMOUNT (GEMS)</label>
-                        <input type="number" id="mineBet" value="1000" min="100" class="mines-input" style="margin-top:6px;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:var(--text-muted); font-weight:bold;">MINE COUNT</label>
-                        <select id="mineBombs" class="mines-input" style="margin-top:6px;">
-                            <option value="1">1 Mine (Low Risk)</option>
-                            <option value="3" selected>3 Mines (Standard)</option>
-                            <option value="5">5 Mines (High Risk)</option>
-                            <option value="10">10 Mines (Extreme)</option>
-                            <option value="20">20 Mines (Godlike)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; color:var(--text-muted); font-weight:bold;">CURRENT MULTIPLIER</label>
-                        <div id="mineMultiplier" style="font-family:'Cinzel',serif; font-size:28px; color:var(--lol-blue-glow); font-weight:900; margin-top:4px;">1.00x</div>
-                    </div>
-                    <button class="btn-gold" id="btnStartMines" onclick="startMines()">START GAME</button>
-                    <button class="btn-gold" id="btnCashoutMines" style="display:none; background:linear-gradient(180deg, #059669, #047857); border-color:#34d399;" onclick="cashoutMines()">CASHOUT</button>
-                </div>
-                <div class="mines-board-box">
-                    <div class="mines-grid-matrix" id="minesGrid"></div>
-                </div>
+            <div class="platform-tabs">
+                <button class="plat-btn active" onclick="switchPlatform('windows')">🪟 Windows</button>
+                <button class="plat-btn" onclick="switchPlatform('android')">🤖 Android</button>
+                <button class="plat-btn" onclick="switchPlatform('ios')">🍎 iOS (Surge 5)</button>
+                <button class="plat-btn" onclick="switchPlatform('macos')">🍏 macOS</button>
             </div>
-        </div>
 
-        <!-- TAB: LEADERBOARDS -->
-        <div id="tab-leaderboard" class="tab-panel">
-            <div class="dashboard-layout">
-                <div class="glass-box">
-                    <div class="glass-header">
-                        <h3>👑 RICHEST LOCKS (WL/DL/BGL)</h3>
-                    </div>
-                    <div id="lbRichest">
-                        <div class="empty-placeholder">Calculating wealth...</div>
-                    </div>
-                </div>
-                <div class="glass-box">
-                    <div class="glass-header">
-                        <h3>💎 GEMS VAULT RANKINGS</h3>
-                    </div>
-                    <div id="lbGems">
-                        <div class="empty-placeholder">Calculating balances...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB: LOGS -->
-        <div id="tab-logs" class="tab-panel">
-            <div class="glass-box">
-                <div class="glass-header">
-                    <h3>FULL SECURITY & SERVER LOGS</h3>
-                </div>
-                <div class="terminal-stream" id="fullLogStream" style="height: 560px;">
-                    <div class="empty-placeholder">Streaming...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB: ADMIN -->
-        <div id="tab-admin" class="tab-panel">
-            <div class="glass-box" style="border-color: var(--lol-gold);">
-                <div class="glass-header">
-                    <h3 style="color:var(--lol-gold-bright);">⚡ VOIDPS MASTER CONTROL PANEL</h3>
-                    <span style="color:var(--online-green); font-weight:bold;">AUTHORIZED</span>
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px;">
-                    <div class="mines-panel">
-                        <h4>📢 Global World Broadcast</h4>
-                        <input type="text" id="broadcastText" placeholder="Broadcast message to server..." class="mines-input">
-                        <button class="btn-gold" onclick="sendBroadcast()">BROADCAST TO WORLD</button>
-                    </div>
-                    <div class="mines-panel">
-                        <h4>⚡ Champion Punishment</h4>
-                        <input type="text" id="targetPlayer" placeholder="Player Name" class="mines-input">
-                        <div style="display:flex; gap:10px;">
-                            <button class="btn-gold" style="flex:1;" onclick="adminAction('kick')">KICK</button>
-                            <button class="btn-gold" style="flex:1; border-color:#f43f5e;" onclick="adminAction('ban')">BAN</button>
+            <!-- WINDOWS GUIDE -->
+            <div id="guide-windows" class="guide-content">
+                <div class="guide-container">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-content">
+                            <h4 id="winStep1Title">Run Notepad as Administrator</h4>
+                            <p id="winStep1Desc">Right-click Notepad and choose "Run as Administrator".</p>
                         </div>
                     </div>
-                    <div class="mines-panel">
-                        <h4>💎 Economy Grant</h4>
-                        <input type="text" id="grantTarget" placeholder="Target Player" class="mines-input">
-                        <input type="number" id="grantGemsAmt" placeholder="Gems Count" class="mines-input">
-                        <button class="btn-gold" onclick="sendGrantGems()">GRANT GEMS</button>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-content">
+                            <h4 id="winStep2Title">Open hosts file</h4>
+                            <p id="winStep2Desc">Go to File -> Open and navigate to:</p>
+                            <div class="code-snippet">C:\\Windows\\System32\\drivers\\etc\\hosts</div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-content">
+                            <h4 id="winStep3Title">Add entries</h4>
+                            <p id="winStep3Desc">Click Copy Hosts, paste the two lines at the bottom of the file, then Save (Ctrl + S).</p>
+                            <button class="guide-btn" onclick="copyToClipboard('5.39.13.16 growtopia1.com\\n5.39.13.16 growtopia2.com')">📋 <span id="btnCopyHosts">Copy Hosts</span></button>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">4</div>
+                        <div class="step-content">
+                            <h4 id="winStep4Title">Launch Growtopia</h4>
+                            <p id="winStep4Desc">Open Growtopia and click Play.</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Admin Dialog -->
-    <div class="modal-mask" id="adminModal">
-        <div class="modal-card">
-            <h3 style="font-family:'Cinzel',serif; color:var(--lol-gold-bright); font-size:20px; margin-bottom:20px; text-align:center;">ADMIN AUTHENTICATION</h3>
-            <div style="display:flex; flex-direction:column; gap:14px;">
-                <div>
-                    <label style="font-size:12px; color:var(--text-muted);">USERNAME</label>
-                    <input type="text" id="authUsername" placeholder="voidps" class="mines-input" style="margin-top:6px;">
+            <!-- ANDROID GUIDE -->
+            <div id="guide-android" class="guide-content" style="display:none;">
+                <div class="apk-card">
+                    <h5 style="color:#ff4d6d; font-size:13px; font-weight:800; letter-spacing:1px; margin-bottom:4px;" id="apkOptional">OPTIONAL • Quick Setup with APK</h5>
+                    <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;" id="apkDesc">Want to play without doing any other steps? Download .apk file and install it and you're ready to play! (Connects you directly to GTPS Cloud).</p>
+                    <button class="guide-btn" style="background:var(--neon-red);" onclick="alert('Downloading APK...')">📥 <span id="btnDownloadApk">Download GTPS Cloud APK</span></button>
                 </div>
-                <div>
-                    <label style="font-size:12px; color:var(--text-muted);">PASSWORD</label>
-                    <input type="password" id="authPassword" placeholder="voidpsadmin" class="mines-input" style="margin-top:6px;">
+                <div class="guide-container">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-content">
+                            <h4 id="andStep1Title">Install PowerTunnel</h4>
+                            <p id="andStep1Desc">Download from official releases and install the APK on your device.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-content">
+                            <h4 id="andStep2Title">Configure Host Settings</h4>
+                            <p id="andStep2Desc">Open PowerTunnel -> ☰ -> Host Settings -> Host list URL.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-content">
+                            <h4 id="andStep3Title">Paste URL</h4>
+                            <p id="andStep3Desc">Click Copy URL and paste it into PowerTunnel.</p>
+                            <div style="display:flex; gap:10px;">
+                                <button class="guide-btn" onclick="copyToClipboard('https://api.gtps.cloud/hosts/25741')">📋 Copy URL</button>
+                                <button class="guide-btn" onclick="alert('Downloading vHost...')">📥 Download vHost</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">4</div>
+                        <div class="step-content">
+                            <h4 id="andStep4Title">Start</h4>
+                            <p id="andStep4Desc">Set Update period to On start, then press Start.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">5</div>
+                        <div class="step-content">
+                            <h4 id="andStep5Title">Launch Growtopia</h4>
+                            <p id="andStep5Desc">Open Growtopia and click Play.</p>
+                        </div>
+                    </div>
                 </div>
-                <div id="authErr" style="color:var(--offline-red); font-size:13px; display:none;"></div>
-                <button class="btn-gold" style="margin-top:10px;" onclick="performAdminLogin()">LOGIN TO CONTROL</button>
-                <button class="btn-play-now" onclick="closeAdminDialog()">CANCEL</button>
+            </div>
+
+            <!-- IOS GUIDE -->
+            <div id="guide-ios" class="guide-content" style="display:none;">
+                <div class="guide-container">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-content">
+                            <h4 id="iosStep1Title">Install Surge 5</h4>
+                            <p id="iosStep1Desc">Download and install Surge 5 from the App Store.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-content">
+                            <h4 id="iosStep2Title">Import Profile</h4>
+                            <p id="iosStep2Desc">Open Default.conf -> tap IMPORT -> Download Profile from URL.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-content">
+                            <h4 id="iosStep3Title">Paste URL and Setup</h4>
+                            <p id="iosStep3Desc">Click Copy URL, paste into Surge, then tap SETUP and allow the VPN profile.</p>
+                            <button class="guide-btn" onclick="copyToClipboard('https://api.gtps.cloud/surge/25741')">📋 Copy URL</button>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">4</div>
+                        <div class="step-content">
+                            <h4 id="iosStep4Title">Launch Growtopia</h4>
+                            <p id="iosStep4Desc">Open Growtopia and click Play.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MACOS GUIDE -->
+            <div id="guide-macos" class="guide-content" style="display:none;">
+                <div class="guide-container">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-content">
+                            <h4 id="macStep1Title">Open Terminal</h4>
+                            <p id="macStep1Desc">Open Terminal via Spotlight -> type "Terminal" and press Enter.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-content">
+                            <h4 id="macStep2Title">Edit hosts file</h4>
+                            <p id="macStep2Desc">Run the following command:</p>
+                            <div class="code-snippet">sudo nano /etc/hosts</div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-content">
+                            <h4 id="macStep3Title">Add entries</h4>
+                            <p id="macStep3Desc">Click Copy Hosts, paste the two lines at the bottom of the file, then save with Ctrl+X then Y.</p>
+                            <button class="guide-btn" onclick="copyToClipboard('5.39.13.16 growtopia1.com\\n5.39.13.16 growtopia2.com')">📋 Copy Hosts</button>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">4</div>
+                        <div class="step-content">
+                            <h4 id="macStep4Title">Launch Growtopia</h4>
+                            <p id="macStep4Desc">Open Growtopia and click Play.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        let adminToken = localStorage.getItem('voidps_token') || null;
-        let cachedPlayers = [];
+        let currentLang = localStorage.getItem('voidps_lang') || 'en';
 
-        function formatNumber(n) { return Number(n || 0).toLocaleString(); }
+        const TRANSLATIONS = {
+            en: {
+                flag: '🇬🇧',
+                langText: 'ENGLISH',
+                heroTitle: 'THE ULTIMATE GROWTOPIA REALM',
+                heroDesc: 'Connect to the fastest, zero-lag GTPS Cloud server. Join thousands of champions, conquer custom bosses, and trade in our rich economy.',
+                btnHowToPlay: 'HOW TO PLAY',
+                btnStore: 'SHOP ASSETS',
+                lblStatus: 'SERVER STATUS',
+                lblOnline: 'ONLINE PLAYERS',
+                lblPort: 'SERVER PORT',
+                modalTitle: 'HOW TO PLAY ON VOIDPS',
+                winStep1T: 'Run Notepad as Administrator',
+                winStep1D: 'Right-click Notepad and choose "Run as Administrator".',
+                winStep2T: 'Open hosts file',
+                winStep2D: 'Go to File -> Open and navigate to:',
+                winStep3T: 'Add entries',
+                winStep3D: 'Click Copy Hosts, paste the two lines at the bottom of the file, then Save (Ctrl + S).',
+                winStep4T: 'Launch Growtopia',
+                winStep4D: 'Open Growtopia and click Play.',
+                apkOpt: 'OPTIONAL • Quick Setup with APK',
+                apkD: 'Want to play without doing any other steps? Download .apk file and install it and you are ready to play! (Connects you directly to GTPS Cloud).',
+                btnApk: 'Download GTPS Cloud APK',
+                andStep1T: 'Install PowerTunnel',
+                andStep1D: 'Download from official releases and install the APK on your device.',
+                andStep2T: 'Configure Host Settings',
+                andStep2D: 'Open PowerTunnel -> ☰ -> Host Settings -> Host list URL.',
+                andStep3T: 'Paste URL',
+                andStep3D: 'Click Copy URL and paste it into PowerTunnel.',
+                andStep4T: 'Start',
+                andStep4D: 'Set Update period to On start, then press Start.',
+                andStep5T: 'Launch Growtopia',
+                andStep5D: 'Open Growtopia and click Play.',
+                iosStep1T: 'Install Surge 5',
+                iosStep1D: 'Download and install Surge 5 from the App Store.',
+                iosStep2T: 'Import Profile',
+                iosStep2D: 'Open Default.conf -> tap IMPORT -> Download Profile from URL.',
+                iosStep3T: 'Paste URL and Setup',
+                iosStep3D: 'Click Copy URL, paste into Surge, then tap SETUP and allow the VPN profile.',
+                iosStep4T: 'Launch Growtopia',
+                iosStep4D: 'Open Growtopia and click Play.',
+                macStep1T: 'Open Terminal',
+                macStep1D: 'Open Terminal via Spotlight -> type "Terminal" and press Enter.',
+                macStep2T: 'Edit hosts file',
+                macStep2D: 'Run the following command:',
+                macStep3T: 'Add entries',
+                macStep3D: 'Click Copy Hosts, paste the two lines at the bottom of the file, then save with Ctrl+X then Y.',
+                macStep4T: 'Launch Growtopia',
+                macStep4D: 'Open Growtopia and click Play.'
+            },
+            id: {
+                flag: '🇮🇩',
+                langText: 'INDONESIA',
+                heroTitle: 'SERVER GROWTOPIA TERBAIK',
+                heroDesc: 'Terhubung ke server GTPS Cloud tercepat dan tanpa lag. Bergabunglah dengan ribuan pemain, kalahkan custom boss, dan nikmati ekonomi server kami.',
+                btnHowToPlay: 'CARA BERMAIN',
+                btnStore: 'BELI ITEM',
+                lblStatus: 'STATUS SERVER',
+                lblOnline: 'PEMAIN ONLINE',
+                lblPort: 'PORT SERVER',
+                modalTitle: 'CARA BERMAIN DI VOIDPS',
+                winStep1T: 'Buka Notepad sebagai Administrator',
+                winStep1D: 'Klik kanan Notepad lalu pilih "Run as Administrator".',
+                winStep2T: 'Buka file hosts',
+                winStep2D: 'Buka File -> Open lalu navigasi ke:',
+                winStep3T: 'Tambahkan entri',
+                winStep3D: 'Klik Salin Hosts, tempel kedua baris di bagian bawah file, lalu Simpan (Ctrl + S).',
+                winStep4T: 'Buka Growtopia',
+                winStep4D: 'Buka aplikasi Growtopia dan tekan Play.',
+                apkOpt: 'OPSIONAL • Setup Cepat dengan APK',
+                apkD: 'Mau main langsung tanpa repot? Unduh file .apk, pasang di HP Anda dan langsung siap main! (Terhubung langsung ke GTPS Cloud).',
+                btnApk: 'Unduh GTPS Cloud APK',
+                andStep1T: 'Pasang PowerTunnel',
+                andStep1D: 'Unduh dari rilis resmi lalu instal file APK di perangkat Anda.',
+                andStep2T: 'Konfigurasi Host Settings',
+                andStep2D: 'Buka PowerTunnel -> ☰ -> Host Settings -> Host list URL.',
+                andStep3T: 'Tempelkan URL',
+                andStep3D: 'Klik Salin URL lalu tempelkan ke kolom PowerTunnel.',
+                andStep4T: 'Mulai',
+                andStep4D: 'Atur Update period ke On start, lalu tekan Start.',
+                andStep5T: 'Buka Growtopia',
+                andStep5D: 'Buka aplikasi Growtopia dan tekan Play.',
+                iosStep1T: 'Pasang Surge 5',
+                iosStep1D: 'Unduh dan pasang aplikasi Surge 5 dari App Store.',
+                iosStep2T: 'Impor Profil',
+                iosStep2D: 'Buka Default.conf -> tekan IMPORT -> Download Profile from URL.',
+                iosStep3T: 'Tempel URL & Pasang',
+                iosStep3D: 'Klik Salin URL, tempel di Surge, tekan SETUP lalu izinkan profil VPN.',
+                iosStep4T: 'Buka Growtopia',
+                iosStep4D: 'Buka aplikasi Growtopia dan tekan Play.',
+                macStep1T: 'Buka Terminal',
+                macStep1D: 'Buka Terminal via Spotlight -> ketik "Terminal" dan tekan Enter.',
+                macStep2T: 'Edit file hosts',
+                macStep2D: 'Jalankan perintah berikut:',
+                macStep3T: 'Tambahkan entri',
+                macStep3D: 'Klik Salin Hosts, tempelkan di bagian paling bawah, lalu simpan dengan Ctrl+X kemudian Y.',
+                macStep4T: 'Buka Growtopia',
+                macStep4D: 'Buka aplikasi Growtopia dan tekan Play.'
+            }
+        };
 
-        /* Animated Canvas Particles */
-        const canvas = document.getElementById('bg-canvas');
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('voidps_lang', lang);
+            document.getElementById('langModal').style.display = 'none';
+            applyTranslations();
+        }
+
+        function openLanguageModal() {
+            document.getElementById('langModal').style.display = 'flex';
+        }
+
+        function applyTranslations() {
+            const t = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
+            document.getElementById('currentLangFlag').innerText = t.flag;
+            document.getElementById('currentLangText').innerText = t.langText;
+            document.getElementById('heroTitle').innerText = t.heroTitle;
+            document.getElementById('heroDesc').innerText = t.heroDesc;
+            document.getElementById('btnHowToPlayText').innerText = t.btnHowToPlay;
+            document.getElementById('btnStoreText').innerText = t.btnStore;
+            document.getElementById('lblServerStatus').innerText = t.lblStatus;
+            document.getElementById('lblOnlinePlayers').innerText = t.lblOnline;
+            document.getElementById('lblServerPort').innerText = t.lblPort;
+            document.getElementById('tutorialModalTitle').innerText = t.modalTitle;
+
+            document.getElementById('winStep1Title').innerText = t.winStep1T;
+            document.getElementById('winStep1Desc').innerText = t.winStep1D;
+            document.getElementById('winStep2Title').innerText = t.winStep2T;
+            document.getElementById('winStep2Desc').innerText = t.winStep2D;
+            document.getElementById('winStep3Title').innerText = t.winStep3T;
+            document.getElementById('winStep3Desc').innerText = t.winStep3D;
+            document.getElementById('winStep4Title').innerText = t.winStep4T;
+            document.getElementById('winStep4Desc').innerText = t.winStep4D;
+
+            document.getElementById('apkOptional').innerText = t.apkOpt;
+            document.getElementById('apkDesc').innerText = t.apkD;
+            document.getElementById('btnDownloadApk').innerText = t.btnApk;
+            document.getElementById('andStep1Title').innerText = t.andStep1T;
+            document.getElementById('andStep1Desc').innerText = t.andStep1D;
+            document.getElementById('andStep2Title').innerText = t.andStep2T;
+            document.getElementById('andStep2Desc').innerText = t.andStep2D;
+            document.getElementById('andStep3Title').innerText = t.andStep3T;
+            document.getElementById('andStep3Desc').innerText = t.andStep3D;
+            document.getElementById('andStep4Title').innerText = t.andStep4T;
+            document.getElementById('andStep4Desc').innerText = t.andStep4D;
+            document.getElementById('andStep5Title').innerText = t.andStep5T;
+            document.getElementById('andStep5Desc').innerText = t.andStep5D;
+
+            document.getElementById('iosStep1Title').innerText = t.iosStep1T;
+            document.getElementById('iosStep1Desc').innerText = t.iosStep1D;
+            document.getElementById('iosStep2Title').innerText = t.iosStep2T;
+            document.getElementById('iosStep2Desc').innerText = t.iosStep2D;
+            document.getElementById('iosStep3Title').innerText = t.iosStep3T;
+            document.getElementById('iosStep3Desc').innerText = t.iosStep3D;
+            document.getElementById('iosStep4Title').innerText = t.iosStep4T;
+            document.getElementById('iosStep4Desc').innerText = t.iosStep4D;
+
+            document.getElementById('macStep1Title').innerText = t.macStep1T;
+            document.getElementById('macStep1Desc').innerText = t.macStep1D;
+            document.getElementById('macStep2Title').innerText = t.macStep2T;
+            document.getElementById('macStep2Desc').innerText = t.macStep2D;
+            document.getElementById('macStep3Title').innerText = t.macStep3T;
+            document.getElementById('macStep3Desc').innerText = t.macStep3D;
+            document.getElementById('macStep4Title').innerText = t.macStep4T;
+            document.getElementById('macStep4Desc').innerText = t.macStep4D;
+        }
+
+        if (localStorage.getItem('voidps_lang')) {
+            document.getElementById('langModal').style.display = 'none';
+        }
+        applyTranslations();
+
+        function openTutorial(platform) {
+            document.getElementById('tutorialModal').style.display = 'flex';
+            switchPlatform(platform || 'windows');
+        }
+
+        function closeTutorial() {
+            document.getElementById('tutorialModal').style.display = 'none';
+        }
+
+        function switchPlatform(plat) {
+            document.querySelectorAll('.guide-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.plat-btn').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById('guide-' + plat);
+            if (target) target.style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            alert('Copied to clipboard!');
+        }
+
+        /* Animated Red Lightning & Ember Particle Canvas */
+        const canvas = document.getElementById('lightning-canvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
 
@@ -865,18 +1000,17 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             constructor() {
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2 + 1;
-                this.speedX = (Math.random() - 0.5) * 0.8;
-                this.speedY = (Math.random() - 0.5) * 0.8;
-                this.color = Math.random() > 0.5 ? 'rgba(0, 210, 255, 0.4)' : 'rgba(200, 170, 110, 0.3)';
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 1.2;
+                this.speedY = -Math.random() * 1.5 - 0.5;
+                this.color = Math.random() > 0.4 ? 'rgba(255, 0, 68, 0.6)' : 'rgba(225, 29, 72, 0.4)';
             }
             update() {
                 this.x += this.speedX;
                 this.y += this.speedY;
+                if (this.y < 0) this.y = canvas.height;
                 if (this.x < 0) this.x = canvas.width;
                 if (this.x > canvas.width) this.x = 0;
-                if (this.y < 0) this.y = canvas.height;
-                if (this.y > canvas.height) this.y = 0;
             }
             draw() {
                 ctx.fillStyle = this.color;
@@ -886,295 +1020,45 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             }
         }
 
-        for (let i = 0; i < 60; i++) particles.push(new Particle());
+        for (let i = 0; i < 70; i++) particles.push(new Particle());
 
-        function animateParticles() {
+        function animateCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             particles.forEach(p => { p.update(); p.draw(); });
-            requestAnimationFrame(animateParticles);
+            requestAnimationFrame(animateCanvas);
         }
-        animateParticles();
+        animateCanvas();
 
-        /* Navigation */
-        function activateTab(tabId) {
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            const target = document.getElementById(tabId);
-            if (target) target.classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        function openAdminDialog() {
-            if (adminToken) {
-                activateTab('tab-admin');
-                document.getElementById('navAdminTab').classList.add('active');
-            } else {
-                document.getElementById('adminModal').style.display = 'flex';
-            }
-        }
-
-        function closeAdminDialog() {
-            document.getElementById('adminModal').style.display = 'none';
-        }
-
-        async function performAdminLogin() {
-            const u = document.getElementById('authUsername').value;
-            const p = document.getElementById('authPassword').value;
-            const err = document.getElementById('authErr');
-
-            try {
-                const res = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: u, password: p })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    adminToken = data.token;
-                    localStorage.setItem('voidps_token', adminToken);
-                    closeAdminDialog();
-                    document.getElementById('navAdminTab').style.display = 'block';
-                    document.getElementById('btnAdminAuth').innerText = 'CONTROL PANEL';
-                    activateTab('tab-admin');
-                } else {
-                    err.innerText = data.error || 'Invalid credentials';
-                    err.style.display = 'block';
-                }
-            } catch (e) {
-                err.innerText = 'Connection error';
-                err.style.display = 'block';
-            }
-        }
-
-        if (adminToken) {
-            document.getElementById('navAdminTab').style.display = 'block';
-            document.getElementById('btnAdminAuth').innerText = 'CONTROL PANEL';
-        }
-
-        /* Item Icon Helper */
-        function renderItemIcon(itemID) {
-            const id = Number(itemID);
-            if (id === 7188) return '<span class="gt-icon icon-bgl">💎</span>';
-            if (id === 1796) return '<span class="gt-icon icon-dl">💠</span>';
-            if (id === 242) return '<span class="gt-icon icon-wl">🔒</span>';
-            if (id === 112) return '<span class="gt-icon icon-gems">✨</span>';
-            if (id === 3898) return '<span class="gt-icon">☎️</span>';
-            if (id === 1008) return '<span class="gt-icon">🏧</span>';
-            return '<span class="gt-icon">📦</span>';
-        }
-
-        async function fetchServerFeed() {
+        /* Real-time server sync */
+        async function fetchServerStatus() {
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
-
                 const isOnline = data.status === 'ONLINE';
-                const heroDot = document.getElementById('heroStatusDot');
-                const heroTxt = document.getElementById('heroStatusText');
+
+                const dot = document.getElementById('statusDot');
+                const txt = document.getElementById('statusText');
 
                 if (isOnline) {
-                    heroDot.style.background = 'var(--online-green)';
-                    heroDot.style.boxShadow = '0 0 10px var(--online-green)';
-                    heroTxt.innerText = 'SERVER ONLINE';
+                    dot.style.background = 'var(--online-green)';
+                    dot.style.boxShadow = '0 0 12px var(--online-green)';
+                    txt.innerText = 'ONLINE';
+                    txt.style.color = 'var(--online-green)';
                 } else {
-                    heroDot.style.background = 'var(--offline-red)';
-                    heroDot.style.boxShadow = '0 0 10px var(--offline-red)';
-                    heroTxt.innerText = 'SERVER OFFLINE';
+                    dot.style.background = 'var(--offline-red)';
+                    dot.style.boxShadow = '0 0 12px var(--offline-red)';
+                    txt.innerText = 'OFFLINE';
+                    txt.style.color = 'var(--offline-red)';
                 }
 
-                document.getElementById('cardPort').innerText = data.port || 25741;
-                document.getElementById('cardOnline').innerText = data.playerCount || 0;
-                document.getElementById('heroPlayerCount').innerText = (data.playerCount || 0) + ' PLAYERS ONLINE';
-                document.getElementById('playerBadge').innerText = (data.playerCount || 0) + ' ONLINE';
-
-                cachedPlayers = data.players || [];
-                renderPlayerList(cachedPlayers);
-                renderLogs(data.logs || []);
-                renderLeaderboards(cachedPlayers);
+                document.getElementById('playerCountVal').innerText = data.playerCount || 0;
             } catch (e) {
                 console.error(e);
             }
         }
 
-        function renderPlayerList(players) {
-            const live = document.getElementById('livePlayerList');
-            const roster = document.getElementById('rosterList');
-
-            if (!players || players.length === 0) {
-                const empty = '<div class="empty-placeholder">No champions currently online.</div>';
-                live.innerHTML = empty;
-                roster.innerHTML = empty;
-                return;
-            }
-
-            const html = players.map(p => \`
-                <div class="player-row">
-                    <div>
-                        <div class="player-title">👑 \${p.name}</div>
-                        <div class="player-loc">📍 World: <b>\${p.world}</b></div>
-                    </div>
-                    <div class="player-wealth">
-                        <div style="color:var(--text-gold); font-weight:700;">
-                            \${renderItemIcon(112)} \${formatNumber(p.gems)} Gems
-                        </div>
-                        <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
-                            Level \${p.level} • \${renderItemIcon(242)} \${p.wl} WL
-                        </div>
-                    </div>
-                </div>
-            \`).join('');
-
-            live.innerHTML = html;
-            roster.innerHTML = html;
-        }
-
-        function renderLogs(logs) {
-            const live = document.getElementById('liveLogs');
-            const full = document.getElementById('fullLogStream');
-
-            if (!logs || logs.length === 0) {
-                const empty = '<div class="empty-placeholder">No activity logs recorded.</div>';
-                live.innerHTML = empty;
-                full.innerHTML = empty;
-                return;
-            }
-
-            const html = logs.map(l => {
-                let badgeClass = 'badge-chat';
-                if (l.type === 'LOGIN') badgeClass = 'badge-login';
-                if (l.type === 'LOGOUT') badgeClass = 'badge-logout';
-                if (l.type === 'WORLD') badgeClass = 'badge-world';
-
-                return \`
-                    <div class="log-line">
-                        <span style="color:#64748b;">[\${l.time}]</span>
-                        <span class="log-badge \${badgeClass}">\${l.type}</span>
-                        <span>\${l.text}</span>
-                    </div>
-                \`;
-            }).join('');
-
-            live.innerHTML = html;
-            full.innerHTML = html;
-        }
-
-        function renderLeaderboards(players) {
-            const lbR = document.getElementById('lbRichest');
-            const lbG = document.getElementById('lbGems');
-
-            if (!players || players.length === 0) {
-                lbR.innerHTML = '<div class="empty-placeholder">No data.</div>';
-                lbG.innerHTML = '<div class="empty-placeholder">No data.</div>';
-                return;
-            }
-
-            const sortedWL = [...players].sort((a,b) => (b.wl || 0) - (a.wl || 0));
-            const sortedGems = [...players].sort((a,b) => (b.gems || 0) - (a.gems || 0));
-
-            lbR.innerHTML = sortedWL.slice(0, 5).map((p, i) => \`
-                <div class="player-row">
-                    <div class="player-title">#\${i+1} \${p.name}</div>
-                    <div style="color:var(--text-gold); font-weight:bold;">
-                        \${renderItemIcon(242)} \${formatNumber(p.wl)} WL
-                    </div>
-                </div>
-            \`).join('');
-
-            lbG.innerHTML = sortedGems.slice(0, 5).map((p, i) => \`
-                <div class="player-row">
-                    <div class="player-title">#\${i+1} \${p.name}</div>
-                    <div style="color:var(--lol-blue-glow); font-weight:bold;">
-                        \${renderItemIcon(112)} \${formatNumber(p.gems)} Gems
-                    </div>
-                </div>
-            \`).join('');
-        }
-
-        function applyPlayerFilter() {
-            const q = document.getElementById('playerFilter').value.toLowerCase();
-            const filtered = cachedPlayers.filter(p => p.name.toLowerCase().includes(q) || p.world.toLowerCase().includes(q));
-            renderPlayerList(filtered);
-        }
-
-        /* Mines Game */
-        let minesActive = false;
-        let minesMap = [];
-        let currentMultiplier = 1.00;
-        let currentBet = 1000;
-
-        function buildMinesGrid() {
-            const grid = document.getElementById('minesGrid');
-            grid.innerHTML = '';
-            for (let i = 0; i < 25; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'grid-cell';
-                cell.innerText = '❓';
-                cell.onclick = () => onCellClick(i);
-                grid.appendChild(cell);
-            }
-        }
-        buildMinesGrid();
-
-        function startMines() {
-            currentBet = Number(document.getElementById('mineBet').value) || 1000;
-            const bombCount = Number(document.getElementById('mineBombs').value) || 3;
-
-            minesMap = Array(25).fill('GEM');
-            let placed = 0;
-            while (placed < bombCount) {
-                const r = Math.floor(Math.random() * 25);
-                if (minesMap[r] !== 'BOMB') {
-                    minesMap[r] = 'BOMB';
-                    placed++;
-                }
-            }
-
-            minesActive = true;
-            currentMultiplier = 1.00;
-            document.getElementById('mineMultiplier').innerText = '1.00x';
-            document.getElementById('btnStartMines').style.display = 'none';
-            document.getElementById('btnCashoutMines').style.display = 'block';
-            document.getElementById('btnCashoutMines').innerText = \`CASHOUT (\${formatNumber(currentBet)} Gems)\`;
-            buildMinesGrid();
-        }
-
-        function onCellClick(index) {
-            if (!minesActive) return;
-            const grid = document.getElementById('minesGrid');
-            const cell = grid.children[index];
-            if (cell.classList.contains('hit-gem') || cell.classList.contains('hit-bomb')) return;
-
-            if (minesMap[index] === 'BOMB') {
-                cell.className = 'grid-cell hit-bomb';
-                cell.innerText = '💣';
-                minesActive = false;
-                document.getElementById('btnStartMines').style.display = 'block';
-                document.getElementById('btnCashoutMines').style.display = 'none';
-                document.getElementById('mineMultiplier').innerText = '0.00x (BUST)';
-                for (let i = 0; i < 25; i++) {
-                    if (minesMap[i] === 'BOMB') grid.children[i].innerText = '💣';
-                }
-            } else {
-                cell.className = 'grid-cell hit-gem';
-                cell.innerText = '💎';
-                currentMultiplier = (currentMultiplier * 1.25).toFixed(2);
-                document.getElementById('mineMultiplier').innerText = currentMultiplier + 'x';
-                const win = Math.floor(currentBet * currentMultiplier);
-                document.getElementById('btnCashoutMines').innerText = \`CASHOUT (\${formatNumber(win)} Gems)\`;
-            }
-        }
-
-        function cashoutMines() {
-            if (!minesActive) return;
-            minesActive = false;
-            const win = Math.floor(currentBet * currentMultiplier);
-            alert(\`🎉 CASHOUT! You won \${formatNumber(win)} Gems (\${currentMultiplier}x)!\`);
-            document.getElementById('btnStartMines').style.display = 'block';
-            document.getElementById('btnCashoutMines').style.display = 'none';
-        }
-
-        setInterval(fetchServerFeed, 2500);
-        fetchServerFeed();
+        setInterval(fetchServerStatus, 2500);
+        fetchServerStatus();
     </script>
 </body>
 </html>`;
@@ -1185,5 +1069,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`VOIDPS League-Themed Master Control running on port ${PORT}`);
+    console.log(`VOIDPS Red/Black Portal running on port ${PORT}`);
 });
