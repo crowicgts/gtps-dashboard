@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,6 +10,7 @@ const GTPS_CLOUD_API = `https://api.gtps.cloud/g-api/${GTPS_PORT}/status`;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 let serverData = {
     status: "OFFLINE",
@@ -52,28 +54,39 @@ app.get('/api/status', (req, res) => {
     res.json(serverData);
 });
 
+// Serve logo from public or fallback
+app.get('/logo.png', (req, res) => {
+    const localPath = path.join(__dirname, 'public', 'logo.png');
+    if (fs.existsSync(localPath)) {
+        return res.sendFile(localPath);
+    }
+    res.redirect('https://i.ibb.co/6PzX2G1/void-logo.png');
+});
+
 const DASHBOARD_HTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOIDPS • Official Growtopia Realm</title>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>VOID Private Server</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-black: #050104;
-            --bg-card: rgba(18, 3, 10, 0.88);
+            --bg-black: #050005;
+            --bg-card: rgba(18, 3, 10, 0.9);
             --neon-red: #ff0044;
             --neon-crimson: #e11d48;
-            --neon-glow: rgba(255, 0, 68, 0.45);
-            --red-border: rgba(255, 0, 68, 0.4);
+            --neon-glow: rgba(255, 0, 68, 0.5);
+            --red-border: rgba(255, 0, 68, 0.45);
             --text-main: #ffffff;
-            --text-muted: #fda4af;
+            --text-muted: #fca5a5;
             --online-green: #00ff88;
             --offline-red: #ff0044;
+            --discord-color: #5865f2;
+            --whatsapp-color: #25d366;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Space Grotesk', sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
         body {
             background-color: var(--bg-black);
@@ -82,9 +95,9 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             overflow-x: hidden;
             position: relative;
             background-image: 
-                radial-gradient(circle at 15% 20%, rgba(255, 0, 68, 0.16) 0%, transparent 40%),
-                radial-gradient(circle at 85% 20%, rgba(225, 29, 72, 0.16) 0%, transparent 45%),
-                radial-gradient(circle at 50% 80%, rgba(136, 19, 55, 0.22) 0%, transparent 50%);
+                radial-gradient(circle at 20% 15%, rgba(255, 0, 68, 0.18) 0%, transparent 45%),
+                radial-gradient(circle at 80% 15%, rgba(225, 29, 72, 0.18) 0%, transparent 45%),
+                radial-gradient(circle at 50% 80%, rgba(136, 19, 55, 0.25) 0%, transparent 55%);
         }
 
         #lightning-canvas {
@@ -101,34 +114,72 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 44px;
+            padding: 0 40px;
             height: 76px;
-            background: rgba(6, 1, 4, 0.95);
+            background: rgba(8, 1, 5, 0.95);
             border-bottom: 2px solid var(--red-border);
-            box-shadow: 0 4px 35px rgba(0, 0, 0, 0.95), 0 0 25px rgba(255, 0, 68, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.9), 0 0 25px rgba(255, 0, 68, 0.2);
         }
 
-        .nav-logo {
+        .nav-socials {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .nav-logo h1 {
-            font-family: 'Syne', sans-serif;
-            font-size: 28px;
-            font-weight: 900;
-            letter-spacing: 2px;
-            background: linear-gradient(180deg, #ffffff, #ff0044);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px rgba(255, 0, 68, 0.4);
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--red-border);
+            color: #ffffff;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--neon-red);
+            box-shadow: 0 0 15px var(--neon-glow);
+        }
+
+        .social-btn.discord:hover { background: var(--discord-color); border-color: var(--discord-color); }
+        .social-btn.whatsapp:hover { background: var(--whatsapp-color); border-color: var(--whatsapp-color); }
+
+        .social-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
         }
 
         .nav-controls {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
+        }
+
+        .audio-toggle-btn {
+            background: rgba(255, 0, 68, 0.15);
+            border: 1px solid var(--red-border);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .audio-toggle-btn:hover {
+            background: rgba(255, 0, 68, 0.35);
+            box-shadow: 0 0 15px var(--neon-glow);
         }
 
         .lang-switch-btn {
@@ -138,7 +189,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 13px;
             display: flex;
             align-items: center;
@@ -157,42 +208,41 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             height: 15px;
             border-radius: 2px;
             object-fit: cover;
-            box-shadow: 0 0 8px rgba(0,0,0,0.5);
         }
 
-        /* Hero Section */
+        /* Hero Section with Center Logo */
         .hero {
             position: relative;
             z-index: 1;
-            padding: 80px 20px 40px 20px;
+            padding: 50px 20px 30px 20px;
             text-align: center;
-            max-width: 960px;
+            max-width: 900px;
             margin: 0 auto;
         }
 
-        .hero h2 {
-            font-family: 'Syne', sans-serif;
-            font-size: 54px;
-            font-weight: 900;
-            letter-spacing: -1px;
-            background: linear-gradient(180deg, #ffffff, #ff4d6d 60%, #ff0044);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 35px rgba(255, 0, 68, 0.6);
-            margin-bottom: 16px;
-            line-height: 1.1;
+        .main-logo-img {
+            max-width: 440px;
+            width: 85%;
+            height: auto;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 0 35px rgba(255, 0, 68, 0.6));
+            animation: floatLogo 3.5s ease-in-out infinite alternate;
         }
 
-        @media (max-width: 768px) { .hero h2 { font-size: 38px; } }
+        @keyframes floatLogo {
+            0% { transform: translateY(0); filter: drop-shadow(0 0 30px rgba(255, 0, 68, 0.5)); }
+            100% { transform: translateY(-8px); filter: drop-shadow(0 0 50px rgba(255, 0, 68, 0.85)); }
+        }
 
         .hero p {
             color: var(--text-muted);
             font-size: 16px;
             margin-bottom: 34px;
             line-height: 1.6;
-            max-width: 700px;
+            max-width: 680px;
             margin-left: auto;
             margin-right: auto;
+            font-weight: 500;
         }
 
         .hero-action-buttons {
@@ -200,11 +250,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             justify-content: center;
             gap: 20px;
             flex-wrap: wrap;
-            margin-bottom: 40px;
+            margin-bottom: 36px;
         }
 
         .btn-glow-red {
-            font-family: 'Syne', sans-serif;
             font-size: 15px;
             font-weight: 800;
             letter-spacing: 1px;
@@ -229,7 +278,6 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         .btn-glow-store {
-            font-family: 'Syne', sans-serif;
             font-size: 15px;
             font-weight: 800;
             letter-spacing: 1px;
@@ -255,7 +303,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             transform: translateY(-3px);
         }
 
-        /* Status Cards (Only Status and Players) */
+        /* Status Cards */
         .status-container {
             max-width: 680px;
             margin: 0 auto 50px auto;
@@ -287,19 +335,17 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         .status-card h4 {
-            font-family: 'Space Grotesk', sans-serif;
             font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 2px;
             color: var(--text-muted);
             margin-bottom: 8px;
-            font-weight: 700;
+            font-weight: 800;
         }
 
         .status-card .val {
-            font-family: 'Syne', sans-serif;
-            font-size: 32px;
-            font-weight: 800;
+            font-size: 30px;
+            font-weight: 900;
             color: #ffffff;
             display: flex;
             align-items: center;
@@ -348,9 +394,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         .tutorial-header h3 {
-            font-family: 'Syne', sans-serif;
-            font-size: 24px;
-            font-weight: 800;
+            font-size: 22px;
+            font-weight: 900;
             color: #ff4d6d;
             letter-spacing: 1px;
         }
@@ -368,7 +413,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             color: var(--text-muted);
             padding: 10px 22px;
             border-radius: 8px;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 14px;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -415,26 +460,24 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Syne', sans-serif;
-            font-weight: 800;
+            font-weight: 900;
             font-size: 16px;
             flex-shrink: 0;
             box-shadow: 0 0 12px var(--neon-glow);
         }
 
         .step-content h4 {
-            font-family: 'Space Grotesk', sans-serif;
             font-size: 17px;
-            font-weight: 700;
+            font-weight: 800;
             color: #ffffff;
             margin-bottom: 4px;
         }
 
         .step-content p {
-            font-family: 'Inter', sans-serif;
             font-size: 14px;
             color: var(--text-muted);
             line-height: 1.5;
+            font-weight: 500;
         }
 
         .code-snippet {
@@ -455,7 +498,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             color: #fff;
             padding: 9px 18px;
             border-radius: 6px;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 13px;
             cursor: pointer;
             margin-top: 10px;
@@ -478,7 +521,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             margin-bottom: 22px;
         }
 
-        /* Language Welcome Overlay */
+        /* Language Welcome Modal */
         .lang-modal {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -503,9 +546,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         .lang-box h3 {
-            font-family: 'Syne', sans-serif;
             font-size: 24px;
-            font-weight: 800;
+            font-weight: 900;
             color: #ffffff;
             margin-bottom: 6px;
             letter-spacing: 1px;
@@ -524,7 +566,6 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             padding: 22px 16px;
             border-radius: 14px;
             color: white;
-            font-family: 'Syne', sans-serif;
             font-weight: 800;
             font-size: 16px;
             cursor: pointer;
@@ -543,8 +584,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         }
 
         .choice-flag {
-            width: 48px;
-            height: 32px;
+            width: 50px;
+            height: 33px;
             border-radius: 4px;
             box-shadow: 0 0 15px rgba(0,0,0,0.6);
             object-fit: cover;
@@ -554,12 +595,17 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 <body>
     <canvas id="lightning-canvas"></canvas>
 
-    <!-- Language Selector Popup -->
+    <!-- Background Audio Loop -->
+    <audio id="bgAudio" loop preload="auto">
+        <source src="https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=cyberpunk-2099-10701.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Language Selector Modal -->
     <div class="lang-modal" id="langModal">
         <div class="lang-box">
-            <div style="font-size: 40px; margin-bottom: 8px; filter: drop-shadow(0 0 15px var(--neon-red));">⚡</div>
+            <img src="/logo.png" alt="VOID" style="max-width: 160px; margin-bottom: 14px; filter: drop-shadow(0 0 20px var(--neon-red));">
             <h3>SELECT LANGUAGE</h3>
-            <p style="color: var(--text-muted); font-size: 14px;">PILIH BAHASA ANDA UNTUK MELANJUTKAN</p>
+            <p style="color: var(--text-muted); font-size: 14px; font-weight: 600;">PILIH BAHASA ANDA UNTUK MELANJUTKAN</p>
             <div class="lang-options">
                 <button class="lang-choice-btn" onclick="setLanguage('en')">
                     <img src="https://flagcdn.com/w80/gb.png" alt="English" class="choice-flag">
@@ -575,11 +621,22 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
     <!-- Navigation -->
     <nav class="navbar">
-        <div class="nav-logo">
-            <span style="font-size: 26px; filter: drop-shadow(0 0 10px var(--neon-red));">⚡</span>
-            <h1>VOIDPS</h1>
+        <div class="nav-socials">
+            <a href="https://discord.gg" target="_blank" class="social-btn discord" title="Join Discord">
+                <svg viewBox="0 0 127.14 96.36">
+                    <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,45.91,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,45.91,96.12,53,91.08,65.69,84.69,65.69Z"/>
+                </svg>
+            </a>
+            <a href="https://whatsapp.com" target="_blank" class="social-btn whatsapp" title="WhatsApp Group">
+                <svg viewBox="0 0 448 512">
+                    <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+                </svg>
+            </a>
         </div>
         <div class="nav-controls">
+            <button class="audio-toggle-btn" onclick="toggleAudio()" id="audioBtn">
+                <span id="audioIcon">🔇</span> <span id="audioTxt">MUSIC: OFF</span>
+            </button>
             <button class="lang-switch-btn" onclick="openLanguageModal()">
                 <img src="https://flagcdn.com/w80/gb.png" id="currentLangFlag" alt="Language" class="flag-img">
                 <span id="currentLangText">ENGLISH</span>
@@ -587,27 +644,27 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    <!-- Hero Section (Center Logo) -->
     <section class="hero">
-        <h2 id="heroTitle">THE ULTIMATE GROWTOPIA REALM</h2>
+        <img src="/logo.png" alt="VOID Private Server" class="main-logo-img">
         <p id="heroDesc">Connect to the fastest, zero-lag GTPS Cloud server. Join thousands of champions, conquer custom bosses, and trade in our rich economy.</p>
         
         <div class="hero-action-buttons">
             <button class="btn-glow-red" onclick="openTutorial('windows')">
-                <span>📖</span> <span id="btnHowToPlayText">HOW TO PLAY</span>
+                <span id="btnHowToPlayText">HOW TO PLAY</span>
             </button>
             <button class="btn-glow-store" onclick="alert('Store coming soon!')">
-                <span>🛒</span> <span id="btnStoreText">SHOP ASSETS</span>
+                <span id="btnStoreText">SHOP ASSETS</span>
             </button>
         </div>
     </section>
 
-    <!-- Live Status Cards (Only Status & Players) -->
+    <!-- Live Status Cards -->
     <section class="status-container">
         <div class="status-card">
             <h4 id="lblServerStatus">SERVER STATUS</h4>
             <div class="val">
-                <span id="statusDot" style="width:12px; height:12px; border-radius:50%; background:var(--online-green); box-shadow:0 0 12px var(--online-green);"></span>
+                <span id="statusDot" style="width:14px; height:14px; border-radius:50%; background:var(--online-green); box-shadow:0 0 14px var(--online-green);"></span>
                 <span id="statusText">ONLINE</span>
             </div>
         </div>
@@ -617,7 +674,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
         </div>
     </section>
 
-    <!-- Tutorial Modal (Exact match to screenshots) -->
+    <!-- Tutorial Modal -->
     <div class="tutorial-modal" id="tutorialModal">
         <div class="tutorial-box">
             <div class="tutorial-header">
@@ -626,10 +683,10 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             </div>
 
             <div class="platform-tabs">
-                <button class="plat-btn active" onclick="switchPlatform('windows')">🪟 Windows</button>
-                <button class="plat-btn" onclick="switchPlatform('android')">🤖 Android</button>
-                <button class="plat-btn" onclick="switchPlatform('ios')">🍎 iOS (Surge 5)</button>
-                <button class="plat-btn" onclick="switchPlatform('macos')">🍏 macOS</button>
+                <button class="plat-btn active" onclick="switchPlatform('windows')">Windows</button>
+                <button class="plat-btn" onclick="switchPlatform('android')">Android</button>
+                <button class="plat-btn" onclick="switchPlatform('ios')">iOS (Surge 5)</button>
+                <button class="plat-btn" onclick="switchPlatform('macos')">macOS</button>
             </div>
 
             <!-- WINDOWS GUIDE -->
@@ -655,7 +712,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                         <div class="step-content">
                             <h4 id="winStep3Title">Add entries</h4>
                             <p id="winStep3Desc">Click Copy Hosts, paste the two lines at the bottom of the file, then Save (Ctrl + S).</p>
-                            <button class="guide-btn" onclick="copyToClipboard('5.39.13.16 growtopia1.com\\n5.39.13.16 growtopia2.com')">📋 <span id="btnCopyHosts">Copy Hosts</span></button>
+                            <button class="guide-btn" onclick="copyToClipboard('5.39.13.16 growtopia1.com\\n5.39.13.16 growtopia2.com')"><span id="btnCopyHosts">Copy Hosts</span></button>
                         </div>
                     </div>
                     <div class="step-item">
@@ -673,7 +730,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                 <div class="apk-card">
                     <h5 style="color:#ff4d6d; font-size:13px; font-weight:800; letter-spacing:1px; margin-bottom:4px;" id="apkOptional">OPTIONAL • Quick Setup with APK</h5>
                     <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;" id="apkDesc">Want to play without doing any other steps? Download .apk file and install it and you're ready to play! (Connects you directly to GTPS Cloud).</p>
-                    <button class="guide-btn" style="background:var(--neon-red);" onclick="alert('Downloading APK...')">📥 <span id="btnDownloadApk">Download GTPS Cloud APK</span></button>
+                    <button class="guide-btn" style="background:var(--neon-red);" onclick="alert('Downloading APK...')"><span id="btnDownloadApk">Download GTPS Cloud APK</span></button>
                 </div>
                 <div class="guide-container">
                     <div class="step-item">
@@ -696,8 +753,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                             <h4 id="andStep3Title">Paste URL</h4>
                             <p id="andStep3Desc">Click Copy URL and paste it into PowerTunnel.</p>
                             <div style="display:flex; gap:10px;">
-                                <button class="guide-btn" onclick="copyToClipboard('https://api.gtps.cloud/hosts/25741')">📋 Copy URL</button>
-                                <button class="guide-btn" onclick="alert('Downloading vHost...')">📥 Download vHost</button>
+                                <button class="guide-btn" onclick="copyToClipboard('https://api.gtps.cloud/hosts/25741')">Copy URL</button>
+                                <button class="guide-btn" onclick="alert('Downloading vHost...')">Download vHost</button>
                             </div>
                         </div>
                     </div>
@@ -740,7 +797,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                         <div class="step-content">
                             <h4 id="iosStep3Title">Paste URL and Setup</h4>
                             <p id="iosStep3Desc">Click Copy URL, paste into Surge, then tap SETUP and allow the VPN profile.</p>
-                            <button class="guide-btn" onclick="copyToClipboard('https://api.gtps.cloud/surge/25741')">📋 Copy URL</button>
+                            <button class="guide-btn" onclick="copyToClipboard('https://api.gtps.cloud/surge/25741')">Copy URL</button>
                         </div>
                     </div>
                     <div class="step-item">
@@ -776,7 +833,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                         <div class="step-content">
                             <h4 id="macStep3Title">Add entries</h4>
                             <p id="macStep3Desc">Click Copy Hosts, paste the two lines at the bottom of the file, then save with Ctrl+X then Y.</p>
-                            <button class="guide-btn" onclick="copyToClipboard('5.39.13.16 growtopia1.com\\n5.39.13.16 growtopia2.com')">📋 Copy Hosts</button>
+                            <button class="guide-btn" onclick="copyToClipboard('5.39.13.16 growtopia1.com\\n5.39.13.16 growtopia2.com')">Copy Hosts</button>
                         </div>
                     </div>
                     <div class="step-item">
@@ -793,12 +850,30 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
 
     <script>
         let currentLang = localStorage.getItem('voidps_lang') || 'en';
+        let audioPlaying = false;
+
+        function toggleAudio() {
+            const audio = document.getElementById('bgAudio');
+            const icon = document.getElementById('audioIcon');
+            const txt = document.getElementById('audioTxt');
+            if (audioPlaying) {
+                audio.pause();
+                audioPlaying = false;
+                icon.innerText = '🔇';
+                txt.innerText = 'MUSIC: OFF';
+            } else {
+                audio.play().then(() => {
+                    audioPlaying = true;
+                    icon.innerText = '🔊';
+                    txt.innerText = 'MUSIC: ON';
+                }).catch(e => console.log(e));
+            }
+        }
 
         const TRANSLATIONS = {
             en: {
                 flagSrc: 'https://flagcdn.com/w80/gb.png',
                 langText: 'ENGLISH',
-                heroTitle: 'THE ULTIMATE GROWTOPIA REALM',
                 heroDesc: 'Connect to the fastest, zero-lag GTPS Cloud server. Join thousands of champions, conquer custom bosses, and trade in our rich economy.',
                 btnHowToPlay: 'HOW TO PLAY',
                 btnStore: 'SHOP ASSETS',
@@ -846,7 +921,6 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             id: {
                 flagSrc: 'https://flagcdn.com/w80/id.png',
                 langText: 'INDONESIA',
-                heroTitle: 'SERVER GROWTOPIA TERBAIK',
                 heroDesc: 'Terhubung ke server GTPS Cloud tercepat dan tanpa lag. Bergabunglah dengan ribuan pemain, kalahkan custom boss, dan nikmati ekonomi server kami.',
                 btnHowToPlay: 'CARA BERMAIN',
                 btnStore: 'BELI ITEM',
@@ -898,6 +972,8 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             localStorage.setItem('voidps_lang', lang);
             document.getElementById('langModal').style.display = 'none';
             applyTranslations();
+            // Start audio on user gesture
+            if (!audioPlaying) toggleAudio();
         }
 
         function openLanguageModal() {
@@ -908,7 +984,6 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
             const t = TRANSLATIONS[currentLang] || TRANSLATIONS.en;
             document.getElementById('currentLangFlag').src = t.flagSrc;
             document.getElementById('currentLangText').innerText = t.langText;
-            document.getElementById('heroTitle').innerText = t.heroTitle;
             document.getElementById('heroDesc').innerText = t.heroDesc;
             document.getElementById('btnHowToPlayText').innerText = t.btnHowToPlay;
             document.getElementById('btnStoreText').innerText = t.btnStore;
@@ -1011,7 +1086,7 @@ const DASHBOARD_HTML = `<!DOCTYPE html>
                 this.y += this.speedY;
                 if (this.y < 0) this.y = canvas.height;
                 if (this.x < 0) this.x = canvas.width;
-                if (this.x > canvas.width) this.x = 0;
+                if (this.y > canvas.height) this.y = 0;
             }
             draw() {
                 ctx.fillStyle = this.color;
@@ -1069,5 +1144,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`VOIDPS Red & Black Portal running on port ${PORT}`);
+    console.log(`VOID Private Server portal running on port ${PORT}`);
 });
